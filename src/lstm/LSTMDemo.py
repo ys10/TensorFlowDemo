@@ -12,11 +12,19 @@ layers_num = 2
 batch_size = 10
 
 # Construct LSTM layers.
-lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(lstm_size, forget_bias=0.0, state_is_tuple=True)
-cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * layers_num, state_is_tuple=True)
+lstm_cell = tf.contrib.rnn.BasicLSTMCell(lstm_size, forget_bias=0.0, state_is_tuple=True)
+cell = tf.contrib.rnn.MultiRNNCell([lstm_cell] * layers_num, state_is_tuple=True)
 
-# Initial states.
+# Initial states of LSTM.
 initial_state = cell.zero_state(batch_size, tf.float32)
+
+# Initialize the configuration of data set.
+# TODO
+
+# Train the Network with data.
+# Process training data by Trunk.
+# TODO
+
 
 
 
