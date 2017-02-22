@@ -1,1 +1,1 @@
-__all__ = ["TestDemo"]
+__all__ = ["TensorFlowTestDemo", "HDF5TestDemo"]
