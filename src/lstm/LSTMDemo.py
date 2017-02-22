@@ -1,11 +1,15 @@
 from __future__ import print_function
 
 import tensorflow as tf
+import numpy, h5py
 from tensorflow.contrib import rnn
 
 # Import data set
-from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
+# Read hdf5 file as data set.
+f = h5py.File('/tmp/data/train-timit.hdf5','r')
+data = f.get('path/to/my/dataset')
+# TODO
+f.close()
 
 '''
 To classify image using a recurrent neural network, we consider every image
@@ -15,9 +19,9 @@ handle 28 sequences of 28 steps for every sample.
 
 # Parameters
 learning_rate = 0.001
-training_iters = 100000
-batch_size = 128
+batch_size = 32
 display_step = 10
+training_iters = 10000
 
 # Network Parameters
 n_input = 69 # MNIST data input (img shape: 28*28)
@@ -86,6 +90,7 @@ with tf.Session() as sess:
         batch_x, batch_y = mnist.train.next_batch(batch_size)
         # Reshape data to get 28 seq of 28 elements
         batch_x = batch_x.reshape((batch_size, n_steps, n_input))
+        # TODO
         # Run optimization op (backprop)
         sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
         if step % display_step == 0:
