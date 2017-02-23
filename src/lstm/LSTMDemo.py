@@ -24,7 +24,7 @@ we will then handle 69 sequences of 200 steps for every sample.
 
 # Parameters
 learning_rate = 0.001
-batch_size = 32
+batch_size = 1
 display_step = 1
 training_iters = 1
 # For dropout.
@@ -32,11 +32,11 @@ training_iters = 1
 keep_prob = 1.0
 
 # Network Parameters
-n_input = 69 # MNIST data input (img shape: 28*28)
-n_steps = 200 # timesteps
+n_input = 69 # data input
+n_steps = 200 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-n_classes = 49 # MNIST total classes (0-9 digits)
+n_classes = 49 # total classes
 
 # tf Graph input
 x = tf.placeholder("float32", [None, n_steps, n_input])
@@ -58,7 +58,7 @@ def RNN(x, weights, biases):
     # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
 
     # Permuting batch_size and n_steps
-    # x = tf.transpose(x, [1, 0, 2])
+    x = tf.transpose(x, [1, 0, 2])
     # Reshaping to (n_steps*batch_size, n_input)
     x = tf.reshape(x, [-1, n_input])
     # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
@@ -73,9 +73,10 @@ def RNN(x, weights, biases):
 
     # Get lstm cell output
     outputs, states = rnn.static_rnn(cell, x, dtype=tf.float32)
-
+    #
+    print(outputs.__sizeof__())
     # Linear activation, using rnn inner loop last output
-    return tf.matmul(outputs[-1], weights['out']) + biases['out']
+    return tf.matmul(outputs, weights['out']) + biases['out']
 
 pred = RNN(x, weights, biases)
 
@@ -87,25 +88,28 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-# Initializing the variables
-init = tf.global_variables_initializer()
 
 # Launch the graph
 with tf.Session() as sess:
+    # Initializing the variables
+    init = tf.global_variables_initializer()
     sess.run(init)
     # Keep training until reach max iterations
     for epoch in range(0, training_iters, 1):
         # For each epoch.
         # Traverse all batches.
+        print("epoch:"+str(epoch))
+        batch = 0;
         while 1:
-            batch = 0;
+            print("batch:"+str(batch))
             # Read a batch of data.
             lines = groups.readlines(batch_size);
-            if not batch:
+            if not lines:
                 break
             # Traverse the batch.
             step = 1
             for trunk in lines:
+                print("step:"+str(step))
                 # For each trunk in the batch.
                 # Get training data by group name without line break.
                 # X is a tensor of shape (n_steps, n_input)
@@ -113,18 +117,20 @@ with tf.Session() as sess:
                 # Y is a tensor of shape (n_steps, n_classes)
                 trunk_y = training_data['target/' + trunk.strip('\n')]
                 # Reshape data to get 200 seq of 69 elements
-                trunk_x = trunk_x.reshape((1, n_steps, n_input))
+                trunk_x = [trunk_x]
+                # Reshape data to get 200 seq of 49 elements
+                trunk_y = [trunk_y]
                 # Run optimization op (backprop)
                 sess.run(optimizer, feed_dict={x: trunk_x, y: trunk_y})
                 # Print accuracy by display_step.
-                if (step + batch * batch_size) % display_step == 0:
-                    # Calculate batch accuracy
-                    acc = sess.run(accuracy, feed_dict={x: trunk_x, y: trunk_y})
-                    # Calculate batch loss
-                    loss = sess.run(cost, feed_dict={x: trunk_x, y: trunk_y})
-                    print("Iter " + str(step + batch * batch_size) + ", Minibatch Loss= " + \
-                          "{:.6f}".format(loss) + ", Training Accuracy= " + \
-                          "{:.5f}".format(acc))
+                #if (step + batch * batch_size) % display_step == 0:
+                # Calculate batch accuracy
+                acc = sess.run(accuracy, feed_dict={x: trunk_x, y: trunk_y})
+                # Calculate batch loss
+                loss = sess.run(cost, feed_dict={x: trunk_x, y: trunk_y})
+                print("Iter " + str(step) + ", Minibatch Loss= " + \
+                      "{:.6f}".format(loss) + ", Training Accuracy= " + \
+                      "{:.5f}".format(acc))
                 step += 1
             batch += 1
             break
