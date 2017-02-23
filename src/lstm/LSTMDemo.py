@@ -6,22 +6,30 @@ from tensorflow.contrib import rnn
 
 # Import data set
 # Read hdf5 file as data set.
-f = h5py.File('/tmp/data/train-timit.hdf5','r')
-data = f.get('path/to/my/dataset')
-# TODO
-f.close()
+# File storing group name.
+group_file_name = '../../tmp/data/train_speechorder_timit.txt'
+# HDF5 file as training data set.
+training_data_file_name = '../../tmp/data/train-timit.hdf5'
+# Read group data.
+groups = open(group_file_name, 'r')
+# Read training data file.
+training_data = h5py.File(training_data_file_name, 'r')
 
 '''
-To classify image using a recurrent neural network, we consider every image
-row as a sequence of pixels. Because MNIST image shape is 28*28px, we will then
-handle 28 sequences of 28 steps for every sample.
+To classify vector using a recurrent neural network,
+we consider every trunk row as a sequence.
+Because trunk shape is 200*69,
+we will then handle 69 sequences of 200 steps for every sample.
 '''
 
 # Parameters
 learning_rate = 0.001
 batch_size = 32
-display_step = 10
-training_iters = 10000
+display_step = 1
+training_iters = 1
+# For dropout.
+# 每批数据输入时神经网络中的每个单元会以1-keep_prob的概率不工作，可以防止过拟合
+keep_prob = 1.0
 
 # Network Parameters
 n_input = 69 # MNIST data input (img shape: 28*28)
@@ -31,8 +39,8 @@ n_layers = 2 # num of hidden layers
 n_classes = 49 # MNIST total classes (0-9 digits)
 
 # tf Graph input
-x = tf.placeholder("float", [None, n_steps, n_input])
-y = tf.placeholder("float", [None, n_classes])
+x = tf.placeholder("float32", [None, n_steps, n_input])
+y = tf.placeholder("int32", [None, n_steps, n_classes])
 
 # Define weights
 weights = {
@@ -50,7 +58,7 @@ def RNN(x, weights, biases):
     # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
 
     # Permuting batch_size and n_steps
-    x = tf.transpose(x, [1, 0, 2])
+    # x = tf.transpose(x, [1, 0, 2])
     # Reshaping to (n_steps*batch_size, n_input)
     x = tf.reshape(x, [-1, n_input])
     # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
@@ -58,7 +66,8 @@ def RNN(x, weights, biases):
 
     # Define a lstm cell with tensorflow
     lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
-
+    # Drop out in case overfitting.
+    lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
     # Stack two same lstm cell
     cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
@@ -74,7 +83,7 @@ pred = RNN(x, weights, biases)
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
-# Evaluate model
+# Evaluate
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
@@ -84,29 +93,39 @@ init = tf.global_variables_initializer()
 # Launch the graph
 with tf.Session() as sess:
     sess.run(init)
-    step = 1
     # Keep training until reach max iterations
-    while step * batch_size < training_iters:
-        batch_x, batch_y = mnist.train.next_batch(batch_size)
-        # Reshape data to get 28 seq of 28 elements
-        batch_x = batch_x.reshape((batch_size, n_steps, n_input))
-        # TODO
-        # Run optimization op (backprop)
-        sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
-        if step % display_step == 0:
-            # Calculate batch accuracy
-            acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y})
-            # Calculate batch loss
-            loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y})
-            print("Iter " + str(step*batch_size) + ", Minibatch Loss= " + \
-                  "{:.6f}".format(loss) + ", Training Accuracy= " + \
-                  "{:.5f}".format(acc))
-        step += 1
+    for epoch in range(0, training_iters, 1):
+        # For each epoch.
+        # Traverse all batches.
+        while 1:
+            batch = 0;
+            # Read a batch of data.
+            lines = groups.readlines(batch_size);
+            if not batch:
+                break
+            # Traverse the batch.
+            step = 1
+            for trunk in lines:
+                # For each trunk in the batch.
+                # Get training data by group name without line break.
+                # X is a tensor of shape (n_steps, n_input)
+                trunk_x = training_data['source/' + trunk.strip('\n')]
+                # Y is a tensor of shape (n_steps, n_classes)
+                trunk_y = training_data['target/' + trunk.strip('\n')]
+                # Reshape data to get 200 seq of 69 elements
+                trunk_x = trunk_x.reshape((1, n_steps, n_input))
+                # Run optimization op (backprop)
+                sess.run(optimizer, feed_dict={x: trunk_x, y: trunk_y})
+                # Print accuracy by display_step.
+                if (step + batch * batch_size) % display_step == 0:
+                    # Calculate batch accuracy
+                    acc = sess.run(accuracy, feed_dict={x: trunk_x, y: trunk_y})
+                    # Calculate batch loss
+                    loss = sess.run(cost, feed_dict={x: trunk_x, y: trunk_y})
+                    print("Iter " + str(step + batch * batch_size) + ", Minibatch Loss= " + \
+                          "{:.6f}".format(loss) + ", Training Accuracy= " + \
+                          "{:.5f}".format(acc))
+                step += 1
+            batch += 1
+            break
     print("Optimization Finished!")
-
-    # Calculate accuracy for 128 mnist test images
-    test_len = 128
-    test_data = mnist.test.images[:test_len].reshape((-1, n_steps, n_input))
-    test_label = mnist.test.labels[:test_len]
-    print("Testing Accuracy:", \
-        sess.run(accuracy, feed_dict={x: test_data, y: test_label}))
