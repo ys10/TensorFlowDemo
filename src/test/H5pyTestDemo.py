@@ -9,31 +9,32 @@ training_data_file_name = '../../tmp/data/train-timit.hdf5'
 path = os.path.abspath('.')
 print(path)
 # Read group data.
-groups = open(group_file_name);
+groups = open(group_file_name, 'r');
 # Read training data file.
 training_data = h5py.File(training_data_file_name, 'r')
 
-'''
-# Traverse all groups
-while 1:
-    lines = training_data.readlines(10000);
-    if not lines:
-        break
-    for line in lines:
-        x = training_data['source/'+line]
-        y = training_data['target/'+line]
-
-'''
-
+# Get a group.
 print(training_data.keys())
 # Tensors as input data.
 X = training_data['source/fbcg1_si982_5']
 print(X.shape)
 print(X.dtype)
-for i in range(0, X.shape[0], 1):
-    print(X[i])
 # Label as expected classification result.
 Y = training_data['target/fbcg1_si982_5']
 print(Y.shape)
 print(Y.dtype)
-print(Y)
+
+# Traverse all groups
+while 1:
+    lines = groups.readlines(2);
+    if not lines:
+        break
+    for line in lines:
+        # Get training data by group name without line break.
+        X = training_data['source/'+line.strip('\n')]
+        Y = training_data['target/'+line.strip('\n')]
+        for i in range(0, X.shape[0], 1):
+            print(X[i])
+        for i in range(0, Y.shape[0], 1):
+            print(Y[i])
+    break
