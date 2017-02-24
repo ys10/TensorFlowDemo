@@ -24,7 +24,7 @@ we will then handle 69 sequences of 200 steps for every sample.
 
 # Parameters
 learning_rate = 0.001
-batch_size = 2
+batch_size = 16
 display_step = 1
 training_iters = 1
 # For dropout.
