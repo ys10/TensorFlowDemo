@@ -117,10 +117,6 @@ with tf.Session() as sess:
             # Traverse all trunks of a batch.
             for trunk in range(0, batch_size, 1):
                 # For each trunk in the batch.
-
-                # Get training data by trunk name without line break character.
-                # X is a tensor of shape (n_steps, n_input)
-
                 # Calculate the index of current trunk in the whole data set.
                 trunk_name_index = n_batches * batch_size + trunk
                 # There is a fact that if the number of all trunks
@@ -135,7 +131,7 @@ with tf.Session() as sess:
                     trunk_name_index = len(all_trunk_names)-1
                 # Get trunk name from all trunk names by trunk name index.
                 trunk_name = all_trunk_names[trunk_name_index]
-                # Get trunk data.
+                # Get trunk data by trunk name without line break character.
                 # trunk_x is a tensor of shape (n_steps, n_inputs)
                 trunk_x = training_data_file['source/' + trunk_name.strip('\n')]
                 # trunk_y is a tensor of shape (n_steps, n_classes)
