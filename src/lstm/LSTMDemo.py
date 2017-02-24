@@ -19,7 +19,7 @@ training_data_file = h5py.File(training_data_file_name, 'r')
 To classify vector using a recurrent neural network,
 we consider every trunk row as a sequence.
 Because trunk shape is 200*69,
-we will then handle 69 sequences of 200 steps for every sample.
+we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 
 # Parameters
