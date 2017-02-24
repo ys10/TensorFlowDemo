@@ -1,19 +1,19 @@
 from __future__ import print_function
 
 import tensorflow as tf
-import numpy, h5py
+import h5py
+from math import ceil
 from tensorflow.contrib import rnn
 
 # Import data set
-# Read hdf5 file as data set.
-# File storing group name.
-group_file_name = '../../tmp/data/train_speechorder_timit.txt'
-# HDF5 file as training data set.
+# Name of file storing trunk names.
+trunk_names_file_name = '../../tmp/data/train_speechorder_timit.txt'
+# Name of HDF5 file as training data set.
 training_data_file_name = '../../tmp/data/train-timit.hdf5'
-# Read group data.
-groups = open(group_file_name, 'r')
-# Read training data file.
-training_data = h5py.File(training_data_file_name, 'r')
+# Read trunk names.
+trunk_names_file = open(trunk_names_file_name, 'r')
+# Read training data set.
+training_data_file = h5py.File(training_data_file_name, 'r')
 
 '''
 To classify vector using a recurrent neural network,
@@ -24,7 +24,7 @@ we will then handle 69 sequences of 200 steps for every sample.
 
 # Parameters
 learning_rate = 0.001
-batch_size = 1
+batch_size = 2
 display_step = 1
 training_iters = 1
 # For dropout.
@@ -71,12 +71,12 @@ def RNN(x, weights, biases):
     # Stack two same lstm cell
     cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
-    # Get lstm cell output
+    # Get lstm cell output with shape (n_steps, batch_size, n_input)
     outputs, states = rnn.static_rnn(cell, x, dtype=tf.float32)
-    #
+    # Reshaping to (batch_size, n_steps, n_input)
     outputs = tf.transpose(outputs, [1, 0, 2])
-    # print(outputs.__sizeof__())
     # Linear activation, using rnn inner loop last output
+    # The first dim of outputs & weights must be same.
     return tf.matmul(outputs, weights['out']) + biases['out']
 
 pred = RNN(x, weights, biases)
@@ -89,7 +89,6 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-
 # Launch the graph
 with tf.Session() as sess:
     # Initializing the variables
@@ -97,42 +96,55 @@ with tf.Session() as sess:
     sess.run(init)
     # Keep training until reach max iterations
     for iter in range(0, training_iters, 1):
-        # For each epoch.
-        # Traverse all batches.
+        # For each iteration.
         print("iter:"+str(iter))
-        batch = 0;
-        while 1:
+        # Read all trunk names.
+        all_trunk_names = trunk_names_file.readlines();
+        if not all_trunk_names:
+            break
+        n_batches = ceil(len(all_trunk_names)/batch_size)
+        for batch in range(0, n_batches, 1):
+            # Read a batch of trunk names as lines.
+            # Break out of the "while" loop when there is no more batch in current iteration.
+            # For each batch.
             print("batch:"+str(batch))
-            # Read a batch of data.
-            lines = groups.readlines(batch_size);
-            if not lines:
-                break
-            # Traverse the batch.
-            step = 1
-            for trunk in lines:
-                print("step:"+str(step))
-                # For each trunk in the batch.
-                # Get training data by group name without line break.
+            batch_x = []
+            batch_y = []
+            # Traverse all trunks.
+            for trunk in range(0, batch_size, 1):
+                print("trunk:"+str(trunk))
+                # For each trunk in the batch as line in lines.
+                # Get training data by trunk name without line break character.
                 # X is a tensor of shape (n_steps, n_input)
-                trunk_x = training_data['source/' + trunk.strip('\n')]
+                trunk_name_index = n_batches * batch_size + trunk
+                if(trunk_name_index >= len(all_trunk_names)):
+                    trunk_name_index = len(all_trunk_names)-1
+                trunk_name = all_trunk_names[trunk_name_index]
+                trunk_x = training_data_file['source/' + trunk_name.strip('\n')]
                 # Y is a tensor of shape (n_steps, n_classes)
-                trunk_y = training_data['target/' + trunk.strip('\n')]
+                trunk_y = training_data_file['target/' + trunk_name.strip('\n')]
                 # Reshape data to get 200 seq of 69 elements
-                trunk_x = [trunk_x]
+                batch_x.append(trunk_x)
                 # Reshape data to get 200 seq of 49 elements
-                trunk_y = [trunk_y]
-                # Run optimization op (backprop)
-                sess.run(optimizer, feed_dict={x: trunk_x, y: trunk_y})
-                # Print accuracy by display_step.
-                #if (step + batch * batch_size) % display_step == 0:
-                # Calculate batch accuracy
-                acc = sess.run(accuracy, feed_dict={x: trunk_x, y: trunk_y})
-                # Calculate batch loss
-                loss = sess.run(cost, feed_dict={x: trunk_x, y: trunk_y})
-                print("Iter " + str(step) + ", Minibatch Loss= " + \
-                      "{:.6f}".format(loss) + ", Training Accuracy= " + \
-                      "{:.5f}".format(acc))
-                step += 1
+                batch_y.append(trunk_y)
+            #
+            #batch_x = array(batch_x)
+            print("batch_x.len:")
+            print(len(batch_x))
+            #batch_y = array(batch_y)
+            print("batch_y.len:")
+            print(len(batch_y))
+            # Run optimization op (backprop)
+            sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
+            # Print accuracy by display_step.
+            # if (step + batch * batch_size) % display_step == 0:
+            # Calculate batch accuracy
+            acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y})
+            # Calculate batch loss
+            loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y})
+            print("Iter " + str(iter) + ", Batch Loss= " + \
+                  "{:.6f}".format(loss) + ", Training Accuracy= " + \
+                  "{:.5f}".format(acc))
             batch += 1
             break
     print("Optimization Finished!")
