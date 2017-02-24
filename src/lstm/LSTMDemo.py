@@ -39,15 +39,15 @@ n_layers = 2 # num of hidden layers
 n_classes = 49 # total classes
 
 # tf Graph input
-x = tf.placeholder("float32", [None, n_steps, n_input])
-y = tf.placeholder("int32", [None, n_steps, n_classes])
+x = tf.placeholder("float32", [batch_size, n_steps, n_input])
+y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
 
 # Define weights
 weights = {
-    'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
+    'out': tf.Variable(tf.random_normal([batch_size, n_hidden, n_classes]))
 }
 biases = {
-    'out': tf.Variable(tf.random_normal([n_classes]))
+    'out': tf.Variable(tf.random_normal([n_steps, n_classes]))
 }
 
 
@@ -74,7 +74,8 @@ def RNN(x, weights, biases):
     # Get lstm cell output
     outputs, states = rnn.static_rnn(cell, x, dtype=tf.float32)
     #
-    print(outputs.__sizeof__())
+    outputs = tf.transpose(outputs, [1, 0, 2])
+    # print(outputs.__sizeof__())
     # Linear activation, using rnn inner loop last output
     return tf.matmul(outputs, weights['out']) + biases['out']
 
@@ -95,10 +96,10 @@ with tf.Session() as sess:
     init = tf.global_variables_initializer()
     sess.run(init)
     # Keep training until reach max iterations
-    for epoch in range(0, training_iters, 1):
+    for iter in range(0, training_iters, 1):
         # For each epoch.
         # Traverse all batches.
-        print("epoch:"+str(epoch))
+        print("iter:"+str(iter))
         batch = 0;
         while 1:
             print("batch:"+str(batch))
