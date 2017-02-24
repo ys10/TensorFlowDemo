@@ -1,3 +1,9 @@
+'''
+A Recurrent Neural Network (LSTM) implementation example using TensorFlow library.
+Author: Yang Shuai
+Project: https://github.com/ys10/TensorFlowDemo
+'''
+
 from __future__ import print_function
 
 import tensorflow as tf
@@ -141,7 +147,7 @@ with tf.Session() as sess:
                 batch_y.append(trunk_y)
             # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
             # batch_y is a tensor of shape (batch_size, n_steps, n_inputs)
-            # Run optimization op (backprop)
+            # Run optimization operation (Back-propagation Through Time)
             sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
             # Print accuracy by display_batch.
             if (batch * batch_size) % display_batch == 0:
