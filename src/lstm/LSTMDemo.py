@@ -36,10 +36,12 @@ training_iters = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
+# Step of truncated back propagation.
+truncated_step = 100
 
 # Network Parameters
 n_input = 69 # data input
-n_steps = 200 # time steps
+n_steps = 100 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
 n_classes = 49 # total classes
@@ -93,7 +95,7 @@ pred = RNN(x, weights, biases)
 
 # Define loss and optimizer.
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Evaluate
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
@@ -149,6 +151,7 @@ with tf.Session() as sess:
             # batch_y is a tensor of shape (batch_size, n_steps, n_inputs)
             # Run optimization operation (Back-propagation Through Time)
             sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
+            # TODO
             # Print accuracy by display_batch.
             if (batch * batch_size) % display_batch == 0:
                 # Calculate batch accuracy
