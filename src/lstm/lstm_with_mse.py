@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
                 filename='../../log/app.log',
-                filemode='r')
+                filemode='w')
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
