@@ -96,6 +96,9 @@ ENV/
 # Log setting
 .log
 
+# Conf setting
+conf/
+
 # PyCharm project settings
 .idea/
 tmp/
