@@ -41,14 +41,14 @@ truncated_step = 100
 
 # Network Parameters
 n_input = 69 # data input
-n_steps = 100 # time steps
+n_steps = 200 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
 n_classes = 49 # total classes
 
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
-y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
+y = tf.placeholder("int32", [batch_size, n_steps - truncated_step, n_classes])
 
 # Define parameters of full connection between the second LSTM layer and output layer.
 # Define weights.
@@ -57,11 +57,11 @@ weights = {
 }
 # Define biases.
 biases = {
-    'out': tf.Variable(tf.random_normal([n_steps, n_classes]))
+    'out': tf.Variable(tf.random_normal([n_steps - truncated_step, n_classes]))
 }
 
 # Define LSTM as a RNN.
-def RNN(x, weights, biases):
+def RNN(x, weights, biases, truncated_step):
 
     # Prepare data shape to match `rnn` function requirements
     # Current data input shape: (batch_size, n_steps, n_input)
@@ -81,8 +81,19 @@ def RNN(x, weights, biases):
     # Stack two same lstm cell
     cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
+    # Initialize the states of LSTM.
+    # cell.zero_state(batch_size, dtype = tf.float32)
+    # states = tf.zeros([batch_size, n_hidden * n_layers])
+    states = cell.zero_state(batch_size, dtype=tf.float32)
+    # BPTT
+    # for i in range(truncated_step):
+    #     outputs, states = cell(x[i][:][:], states)
+    _, states = rnn.static_rnn(cell, x[:truncated_step][:][:],
+                               initial_state= states, dtype=tf.float32)
     # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
-    outputs, states = rnn.static_rnn(cell, x, dtype=tf.float32)
+    tf.get_variable_scope().reuse_variables()
+    outputs, states = rnn.static_rnn(cell, x[truncated_step:][:][:],
+                                     initial_state= states, dtype=tf.float32)
     # Permuting batch_size and n_steps.
     outputs = tf.transpose(outputs, [1, 0, 2])
     # Now, shape of outputs is (batch_size, n_steps, n_input)
@@ -91,7 +102,7 @@ def RNN(x, weights, biases):
     return tf.matmul(outputs, weights['out']) + biases['out']
 
 # Define prediction of RNN(LSTM).
-pred = RNN(x, weights, biases)
+pred = RNN(x, weights, biases, truncated_step)
 
 # Define loss and optimizer.
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
@@ -142,8 +153,8 @@ with tf.Session() as sess:
                 # Get trunk data by trunk name without line break character.
                 # trunk_x is a tensor of shape (n_steps, n_inputs)
                 trunk_x = training_data_file['source/' + trunk_name.strip('\n')]
-                # trunk_y is a tensor of shape (n_steps, n_classes)
-                trunk_y = training_data_file['target/' + trunk_name.strip('\n')]
+                # trunk_y is a tensor of shape (n_steps - truncated_step, n_classes)
+                trunk_y = training_data_file['target/' + trunk_name.strip('\n')][truncated_step:][:]
                 # Add current trunk into the batch.
                 batch_x.append(trunk_x)
                 batch_y.append(trunk_y)
@@ -151,7 +162,6 @@ with tf.Session() as sess:
             # batch_y is a tensor of shape (batch_size, n_steps, n_inputs)
             # Run optimization operation (Back-propagation Through Time)
             sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
-            # TODO
             # Print accuracy by display_batch.
             if (batch * batch_size) % display_batch == 0:
                 # Calculate batch accuracy
