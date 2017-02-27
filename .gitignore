@@ -97,6 +97,7 @@ ENV/
 .log
 
 # Config setting
+.ini
 conf/
 
 # PyCharm project settings
