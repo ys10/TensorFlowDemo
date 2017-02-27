@@ -159,14 +159,14 @@ with tf.Session() as sess:
                 batch_x.append(trunk_x)
                 batch_y.append(trunk_y)
             # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
-            # batch_y is a tensor of shape (batch_size, n_steps, n_inputs)
+            # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
             # Run optimization operation (Back-propagation Through Time)
             sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
             # Print accuracy by display_batch.
             if (batch * batch_size) % display_batch == 0:
-                # Calculate batch accuracy
+                # Calculate batch accuracy.
                 acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y})
-                # Calculate batch loss
+                # Calculate batch loss.
                 loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y})
                 print("Iter:" + str(iter) + ",Batch:"+ str(batch)
                       + ", Batch Loss= {:.6f}".format(loss)
