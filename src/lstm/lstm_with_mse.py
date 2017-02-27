@@ -6,16 +6,21 @@ Project: https://github.com/ys10/TensorFlowDemo
 
 from __future__ import print_function
 
+import configparser
 import tensorflow as tf
 import h5py
 from math import ceil
 from tensorflow.contrib import rnn
 
+# Import configuration by config parser
+cp = configparser.ConfigParser()
+cp.read('../../conf/lstm_with_mse_data.ini')
+
 # Import data set
 # Name of file storing trunk names.
-trunk_names_file_name = '../../tmp/data/train_speechorder_timit.txt'
+trunk_names_file_name = cp.get('data', 'trunk_names_file_name')
 # Name of HDF5 file as training data set.
-training_data_file_name = '../../tmp/data/train-timit.hdf5'
+training_data_file_name = cp.get('data', 'training_data_file_name')
 # Read trunk names.
 trunk_names_file = open(trunk_names_file_name, 'r')
 # Read training data set.
