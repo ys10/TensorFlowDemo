@@ -93,6 +93,9 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# Log setting
+.log
+
 # PyCharm project settings
 .idea/
 tmp/

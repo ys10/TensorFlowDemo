@@ -7,12 +7,20 @@ Project: https://github.com/ys10/TensorFlowDemo
 from __future__ import print_function
 
 import configparser
+import logging
 import tensorflow as tf
 import h5py
 from math import ceil
 from tensorflow.contrib import rnn
 
-# Import configuration by config parser
+# Config the logger.
+logging.basicConfig(level=logging.DEBUG,
+                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S',
+                filename='../../log/app.log',
+                filemode='w')
+
+# Import configuration by config parser.
 cp = configparser.ConfigParser()
 cp.read('../../conf/lstm_with_mse_data.ini')
 
@@ -173,8 +181,8 @@ with tf.Session() as sess:
                 acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y})
                 # Calculate batch loss.
                 loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y})
-                print("Iter:" + str(iter) + ",Batch:"+ str(batch)
+                logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                       + ", Batch Loss= {:.6f}".format(loss)
                       + ", Training Accuracy= {:.5f}".format(acc))
             break
-    print("Optimization Finished!")
+    logging.info("Optimization Finished!")
