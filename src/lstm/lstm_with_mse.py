@@ -132,8 +132,11 @@ optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minim
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
+# Configure session
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
 # Launch the graph
-with tf.Session() as sess:
+with tf.Session(config=config) as sess:
     # Initializing the variables
     init = tf.global_variables_initializer()
     sess.run(init)
