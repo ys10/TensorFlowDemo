@@ -52,7 +52,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 16
 display_batch = 1
-training_iters = 1
+training_iters = 10
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -138,7 +138,7 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.8
 
 # Initialize the saver to save session.
 saver = tf.train.Saver()
-saved_model_path = '../../tmp/model/lstm.tfmodel'
+saved_model_path = cp.get('model', 'saved_model_path')
 
 # Launch the graph
 with tf.Session(config=config) as sess:
@@ -201,6 +201,6 @@ with tf.Session(config=config) as sess:
                       + ", Batch Loss= {:.6f}".format(loss)
                       + ", Training Accuracy= {:.5f}".format(acc))
         # Save session by iteration.
-        saver.save(sess, saved_model_path);
+        saver.save(sess, saved_model_path + str(iter));
         logging.info("Model saved successfully!")
     logging.info("Optimization Finished!")
