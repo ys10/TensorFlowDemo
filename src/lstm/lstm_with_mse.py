@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.DEBUG,
                 filemode='w')
 # Output to the console.
 console = logging.StreamHandler()
-console.setLevel(logging.INFO)
+console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
@@ -52,7 +52,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 16
 display_batch = 1
-training_iters = 1
+training_iters = 10
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -135,12 +135,18 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 # Configure session
 config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.8
+
+# Initialize the saver to save session.
+saver = tf.train.Saver()
+saved_model_path = '../../tmp/data/lstm.tfmodel'
+
 # Launch the graph
 with tf.Session(config=config) as sess:
     # Initializing the variables
     init = tf.global_variables_initializer()
     sess.run(init)
     # Keep training until reach max iterations
+    logging.info("Start training!")
     for iter in range(0, training_iters, 1):
         # For each iteration.
         # Read all trunk names.
@@ -194,4 +200,7 @@ with tf.Session(config=config) as sess:
                 logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                       + ", Batch Loss= {:.6f}".format(loss)
                       + ", Training Accuracy= {:.5f}".format(acc))
+        # Save session by iteration.
+        saver.save(sess, saved_model_path);
+        logging.info("Model saved successfully!")
     logging.info("Optimization Finished!")
