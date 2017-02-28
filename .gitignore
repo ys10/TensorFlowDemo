@@ -103,3 +103,4 @@ conf/
 # PyCharm project settings
 .idea/
 tmp/
+log/
