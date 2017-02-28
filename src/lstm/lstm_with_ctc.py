@@ -6,10 +6,30 @@ Project: https://github.com/ys10/TensorFlowDemo
 
 from __future__ import print_function
 
+import configparser
+import logging
 import tensorflow as tf
 import h5py
 from math import ceil
 from tensorflow.contrib import rnn
+
+# Config the logger.
+# Output into log file.
+logging.basicConfig(level=logging.DEBUG,
+                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S',
+                filename='../../log/app.log',
+                filemode='w')
+# Output to the console.
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
+
+# Import configuration by config parser.
+cp = configparser.ConfigParser()
+cp.read('../../conf/lstm_with_mse_data.ini')
 
 # Import data set
 # Name of file storing trunk names.
@@ -112,11 +132,18 @@ optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minim
 correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
+# Initialize the saver to save session.
+saver = tf.train.Saver()
+saved_model_path = cp.get('model', 'saved_model_path')
+
 # Launch the graph
 with tf.Session() as sess:
-    # Initializing the variables
-    init = tf.global_variables_initializer()
-    sess.run(init)
+    # Restore the session.
+    saver.restore(sess, saved_model_path)
+    # # Initializing the variables
+    # init = tf.global_variables_initializer()
+    # sess.run(init)
+
     # Keep training until reach max iterations
     for iter in range(0, training_iters, 1):
         # For each iteration.
@@ -161,7 +188,7 @@ with tf.Session() as sess:
             # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
             # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
             # Run optimization operation (Back-propagation Through Time)
-            sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
+            # sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
             # Print accuracy by display_batch.
             if (batch * batch_size) % display_batch == 0:
                 # Calculate batch accuracy.
@@ -171,5 +198,7 @@ with tf.Session() as sess:
                 print("Iter:" + str(iter) + ",Batch:"+ str(batch)
                       + ", Batch Loss= {:.6f}".format(loss)
                       + ", Training Accuracy= {:.5f}".format(acc))
-            break
+        # Save session by iteration.
+        saver.save(sess, saved_model_path + str(iter));
+        logging.info("Model saved successfully!")
     print("Optimization Finished!")
