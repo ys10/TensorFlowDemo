@@ -194,5 +194,4 @@ with tf.Session(config=config) as sess:
                 logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                       + ", Batch Loss= {:.6f}".format(loss)
                       + ", Training Accuracy= {:.5f}".format(acc))
-            break
     logging.info("Optimization Finished!")
