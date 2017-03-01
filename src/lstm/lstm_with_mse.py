@@ -147,10 +147,11 @@ with tf.Session(config=config) as sess:
     sess.run(init)
     # Keep training until reach max iterations
     logging.info("Start training!")
+    # Read all trunk names.
+    all_trunk_names = trunk_names_file.readlines()
     for iter in range(0, training_iters, 1):
         # For each iteration.
-        # Read all trunk names.
-        all_trunk_names = trunk_names_file.readlines();
+        logging.debug("Iter:" + str(iter))
         # Break out of the training iteration while there is no trunk usable.
         if not all_trunk_names:
             break
@@ -192,7 +193,7 @@ with tf.Session(config=config) as sess:
             # Run optimization operation (Back-propagation Through Time)
             sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
             # Print accuracy by display_batch.
-            if (batch * batch_size) % display_batch == 0:
+            if batch % display_batch == 0:
                 # Calculate batch accuracy.
                 acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y})
                 # Calculate batch loss.
