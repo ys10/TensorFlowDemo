@@ -47,40 +47,39 @@ we consider every trunk row as a sequence.
 Because trunk shape is 200*69,
 we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
-
 # Parameters
 learning_rate = 0.001
 batch_size = 16
 display_batch = 1
-training_iters = 1
+training_iters = 10
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
 
 # Network Parameters
 n_input = 69 # data input
+n_steps = 777 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-seq_max_len = 777 # Sequence max length
+n_classes = 49 # total classes
 
 # tf Graph input
-x = tf.placeholder(tf.float32, [batch_size, seq_max_len, n_input])
-y = tf.placeholder(tf.int32, [batch_size, None])
-# A placeholder for indicating each sequence length
-seq_len = tf.placeholder(tf.int32, [batch_size])
+x = tf.placeholder("float32", [batch_size, n_steps, n_input])
+y = tf.placeholder("int32", [batch_size, n_classes, None])
+seq_len = tf.placeholder("int32")
 
 # Define parameters of full connection between the second LSTM layer and output layer.
 # Define weights.
 weights = {
-    'out': tf.Variable(tf.random_normal([batch_size, n_hidden, None]))
+    'out': tf.Variable(tf.random_normal([batch_size, n_hidden, n_classes]))
 }
 # Define biases.
 biases = {
-    'out': tf.Variable(tf.random_normal([None]))
+    'out': tf.Variable(tf.random_normal([n_steps, n_classes]))
 }
 
 # Define LSTM as a RNN.
-def dynamicRNN(x, seq_len, weights, biases,):
+def RNN(x, weights, biases):
 
     # Prepare data shape to match `rnn` function requirements
     # Current data input shape: (batch_size, n_steps, n_input)
@@ -91,7 +90,7 @@ def dynamicRNN(x, seq_len, weights, biases,):
     # Reshaping to (n_steps*batch_size, n_input)
     x = tf.reshape(x, [-1, n_input])
     # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-    x = tf.split(x, seq_max_len, 0)
+    x = tf.split(x, n_steps, 0)
 
     # Define a lstm cell with tensorflow
     lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
@@ -100,29 +99,26 @@ def dynamicRNN(x, seq_len, weights, biases,):
     # Stack two same lstm cell
     cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
+    # Initialize the states of LSTM.
+    # cell.zero_state(batch_size, dtype = tf.float32)
+    # states = tf.zeros([batch_size, n_hidden * n_layers])
+    # states = cell.zero_state(batch_size, dtype=tf.float32)
+
     # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
-    outputs, states = rnn.static_rnn(cell, x, dtype = tf.float32, sequence_length = seq_len)
+    # tf.get_variable_scope().reuse_variables()
+    outputs, states = rnn.static_rnn(cell, x, dtype=tf.float32)
     # Permuting batch_size and n_steps.
-    outputs = tf.pack(outputs)
     outputs = tf.transpose(outputs, [1, 0, 2])
-
-    # Hack to build the indexing and retrieve the right output.
-    # batch_size = tf.shape(outputs)[0]
-    # Start indices for each sample
-    index = tf.range(0, batch_size) * seq_max_len + (seq_len - 1)
-    # Indexing
-    outputs = tf.gather(tf.reshape(outputs, [-1, n_hidden]), index)
-
     # Now, shape of outputs is (batch_size, n_steps, n_input)
     # Linear activation, using rnn inner loop last output
     # The first dim of outputs & weights must be same.
     return tf.matmul(outputs, weights['out']) + biases['out']
 
 # Define prediction of RNN(LSTM).
-pred = dynamicRNN(x, seq_len, weights, biases)
+pred = RNN(x, weights, biases)
 
 # Define loss and optimizer.
-cost = tf.reduce_mean( tf.contrib.ctc.ctc_loss(logits=pred, targets = y, seq_len = seq_len))
+cost = tf.reduce_mean( tf.nn.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Evaluate
@@ -189,6 +185,7 @@ with tf.Session(config=config) as sess:
                 batch_x.append(sentence_x)
                 batch_y.append(sentence_y)
                 batch_seq_len.append(sentence_len)
+            # batch_y = tf.sparse_tensor.convert_to_tensor_or_sparse_tensor(batch_y, tf.int64)
             # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
             # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
             # Run optimization operation (Back-propagation Through Time)
