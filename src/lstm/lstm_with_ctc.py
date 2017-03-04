@@ -65,7 +65,7 @@ n_classes = 49 # total classes
 
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
-y = tf.placeholder("int32", [batch_size, n_classes, None])
+y = tf.sparse_placeholder("int32", [batch_size, None])
 seq_len = tf.placeholder("int32")
 
 # Define parameters of full connection between the second LSTM layer and output layer.
