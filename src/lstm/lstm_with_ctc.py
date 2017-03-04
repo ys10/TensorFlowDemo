@@ -112,7 +112,10 @@ def RNN(x, weights, biases):
     # Now, shape of outputs is (batch_size, n_steps, n_input)
     # Linear activation, using rnn inner loop last output
     # The first dim of outputs & weights must be same.
-    return tf.matmul(outputs, weights['out']) + biases['out']
+    logits = tf.matmul(outputs, weights['out']) + biases['out']
+    #
+    logits = tf.reshape(logits, [batch_size, None, n_classes])
+    return logits
 
 # Define prediction of RNN(LSTM).
 pred = RNN(x, weights, biases)
@@ -122,8 +125,8 @@ cost = tf.reduce_mean( tf.nn.ctc_loss(labels = y, inputs = pred, sequence_length
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Evaluate
-correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
-accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+# correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
+# accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 # Configure session
 config = tf.ConfigProto()
