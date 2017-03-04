@@ -114,7 +114,7 @@ def RNN(x, weights, biases):
     # The first dim of outputs & weights must be same.
     logits = tf.matmul(outputs, weights['out']) + biases['out']
     #
-    logits = tf.reshape(logits, [batch_size, None, n_classes])
+    # logits = tf.reshape(logits, [batch_size, None, n_classes])
     return logits
 
 # Define prediction of RNN(LSTM).
