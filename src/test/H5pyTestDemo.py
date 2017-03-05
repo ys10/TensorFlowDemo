@@ -22,7 +22,7 @@ X = training_data['source/falk0_si1086']
 print(X.shape)
 print(X.dtype)
 # Label as expected classification result.
-Y = training_data['target/falk0_si1086']
+Y = training_data['target/fajw0_sx183']
 print(Y.shape)
 print(Y.dtype)
 
@@ -39,7 +39,7 @@ print(batch_x.shape)
 
 batch_y = []
 batch_y.append(Y)
-batch_y.append(Y)
+# batch_y.append(Y)
 
 print("batch_y:")
 print(batch_y)
@@ -62,8 +62,8 @@ while 1:
         # Get training data by group name without line break.
         X = training_data['source/'+line.strip('\n')]
         Y = training_data['target/'+line.strip('\n')]
-        for i in range(0, X.shape[0], 1):
-            print(X[i])
+        # for i in range(0, X.shape[0], 1):
+        #     print(X[i])
         for i in range(0, Y.shape[0], 1):
             print(Y[i])
     break
