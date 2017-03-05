@@ -12,6 +12,8 @@ import tensorflow as tf
 import h5py
 from math import ceil
 from tensorflow.contrib import rnn
+from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
+
 
 # Config the logger.
 # Output into log file.
@@ -66,7 +68,7 @@ n_classes = 49 # total classes
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
 y = tf.sparse_placeholder("int32", [batch_size, None])
-seq_len = tf.placeholder("int32")
+seq_len = tf.placeholder("int32", [None])
 
 # Define parameters of full connection between the second LSTM layer and output layer.
 # Define weights.
@@ -188,7 +190,7 @@ with tf.Session(config=config) as sess:
                 batch_x.append(sentence_x)
                 batch_y.append(sentence_y)
                 batch_seq_len.append(sentence_len)
-            # batch_y = tf.sparse_tensor.convert_to_tensor_or_sparse_tensor(batch_y, tf.int64)
+            batch_y = sparse_tuple_from(batch_y)
             # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
             # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
             # Run optimization operation (Back-propagation Through Time)
@@ -196,12 +198,14 @@ with tf.Session(config=config) as sess:
             # Print accuracy by display_batch.
             if batch % display_batch == 0:
                 # Calculate batch accuracy.
-                acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
+                # acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                 # Calculate batch loss.
                 loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                 logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
-                      + ", Batch Loss= {:.6f}".format(loss)
-                      + ", Training Accuracy= {:.5f}".format(acc))
+                      + ", Batch Loss= {:.6f}".format(loss))
+                # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
+                #       + ", Batch Loss= {:.6f}".format(loss)
+                #       + ", Training Accuracy= {:.5f}".format(acc))
             break;
         # Save session by iteration.
         saver.save(sess, saved_model_path + str(iter));
