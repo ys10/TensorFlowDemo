@@ -51,7 +51,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
 learning_rate = 0.001
-batch_size = 16
+batch_size = 1
 display_batch = 1
 training_iters = 10
 # For dropout to prevent over-fitting.
