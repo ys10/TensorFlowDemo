@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
 import numpy as np
 
 last_percent_reported = None
@@ -19,6 +20,8 @@ def sparse_tuple_from(sequences, dtype=np.int32):
     for n, seq in enumerate(sequences):
         indices.extend(zip([n]*len(seq), range(len(seq))))
         values.extend(seq)
+        # indices.extend(zip([n] * seq, range(seq)))
+        # values.append(seq)
 
     indices = np.asarray(indices, dtype=np.int64)
     values = np.asarray(values, dtype=dtype)
