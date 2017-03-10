@@ -18,11 +18,11 @@ training_data = h5py.File(training_data_file_name, 'r')
 # Get a group.
 print("keys: "+ str(training_data.keys()))
 # Tensors as input data.
-X = training_data['source/falk0_si1086']
+X = training_data['source/faem0_si1392']
 print(X.shape)
 print(X.dtype)
 # Label as expected classification result.
-Y = training_data['target/fajw0_sx183']
+Y = training_data['target/faem0_si1392']
 print(Y.shape)
 print(Y.dtype)
 

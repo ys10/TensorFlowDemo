@@ -12,7 +12,13 @@ import tensorflow as tf
 import h5py
 from math import ceil
 from tensorflow.contrib import rnn
+from src.lstm.utils import pad_sequences as pad_sequences
 from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
+
+try:
+    from tensorflow.python.ops import ctc_ops
+except ImportError:
+    from tensorflow.contrib.ctc import ctc_ops
 
 
 # Config the logger.
@@ -66,33 +72,35 @@ n_layers = 2 # num of hidden layers
 n_classes = 49 # total classes
 
 # tf Graph input
-x = tf.placeholder("float32", [batch_size, n_steps, n_input])
-y = tf.sparse_placeholder("int32", [batch_size, None])
-seq_len = tf.placeholder("int32", [None])
+x = tf.placeholder(tf.float32, [None, None, n_input])
+y = tf.sparse_placeholder(tf.int32, [batch_size, None])
+seq_len = tf.placeholder(tf.int32, [None])
 
 # Define parameters of full connection between the second LSTM layer and output layer.
 # Define weights.
 weights = {
-    'out': tf.Variable(tf.random_normal([batch_size, n_hidden, n_classes]))
+    # 'out': tf.Variable(tf.random_normal([n_hidden, n_classes], dtype=tf.float64), dtype = tf.float64)
+    'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
 }
 # Define biases.
 biases = {
-    'out': tf.Variable(tf.random_normal([n_steps, n_classes]))
+    # 'out': tf.Variable(tf.random_normal([n_classes], dtype=tf.float64), dtype = tf.float64)
+    'out': tf.Variable(tf.random_normal([n_classes]))
 }
 
 # Define LSTM as a RNN.
-def RNN(x, weights, biases):
+def RNN(x, seq_len, weights, biases):
 
     # Prepare data shape to match `rnn` function requirements
     # Current data input shape: (batch_size, n_steps, n_input)
     # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
 
     # Permuting batch_size and n_steps
-    x = tf.transpose(x, [1, 0, 2])
+    # x = tf.transpose(x, [1, 0, 2])
     # Reshaping to (n_steps*batch_size, n_input)
-    x = tf.reshape(x, [-1, n_input])
+    # x = tf.reshape(x, [-1, n_input])
     # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-    x = tf.split(x, n_steps, 0)
+    # x = tf.split(x, n_steps, 0)
 
     # Define a lstm cell with tensorflow
     lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
@@ -108,27 +116,37 @@ def RNN(x, weights, biases):
 
     # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
     # tf.get_variable_scope().reuse_variables()
-    outputs, states = rnn.static_rnn(cell, x, dtype=tf.float32)
+    outputs, states = tf.nn.dynamic_rnn(cell, x, seq_len, dtype=tf.float32)
     # Permuting batch_size and n_steps.
-    outputs = tf.transpose(outputs, [1, 0, 2])
+    # outputs = tf.transpose(outputs, [1, 0, 2])
+    outputs = tf.reshape(outputs, [-1, n_hidden])
     # Now, shape of outputs is (batch_size, n_steps, n_input)
     # Linear activation, using rnn inner loop last output
     # The first dim of outputs & weights must be same.
     logits = tf.matmul(outputs, weights['out']) + biases['out']
+    logits = tf.reshape(logits, [batch_size, -1, n_classes])
+    logits = tf.transpose(logits, (1, 0, 2))
     #
     # logits = tf.reshape(logits, [batch_size, None, n_classes])
     return logits
 
 # Define prediction of RNN(LSTM).
-pred = RNN(x, weights, biases)
+pred = RNN(x, seq_len, weights, biases)
 
 # Define loss and optimizer.
-cost = tf.reduce_mean( tf.nn.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
+cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Evaluate
 # correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 # accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
+# Option 2: tf.contrib.ctc.ctc_beam_search_decoder
+# (it's slower but you'll get better results)
+decoded, log_prob = ctc_ops.ctc_greedy_decoder(pred, seq_len)
+
+# Inaccuracy: label error rate
+ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
 
 # Configure session
 config = tf.ConfigProto()
@@ -137,6 +155,7 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.8
 # Initialize the saver to save session.
 saver = tf.train.Saver()
 saved_model_path = cp.get('model', 'saved_model_path')
+to_save_model_path = cp.get('model', 'to_save_model_path')
 
 # Launch the graph
 with tf.Session(config=config) as sess:
@@ -190,6 +209,7 @@ with tf.Session(config=config) as sess:
                 batch_x.append(sentence_x)
                 batch_y.append(sentence_y)
                 batch_seq_len.append(sentence_len)
+            batch_x, _ = pad_sequences(batch_x)
             batch_y = sparse_tuple_from(batch_y)
             # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
             # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
@@ -208,6 +228,6 @@ with tf.Session(config=config) as sess:
                 #       + ", Training Accuracy= {:.5f}".format(acc))
             break;
         # Save session by iteration.
-        saver.save(sess, saved_model_path + str(iter));
+        saver.save(sess, to_save_model_path + str(iter));
         logging.info("Model saved successfully!")
     logging.info("Optimization Finished!")

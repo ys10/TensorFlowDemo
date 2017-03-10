@@ -168,84 +168,86 @@ train_inputs = inputs
 # You can preprocess the target data here
 train_targets = labels
 
-
 # THE MAIN CODE!
 
-graph = tf.Graph()
-with graph.as_default():
-    # e.g: log filter bank or MFCC features
-    # Has size [batch_size, max_stepsize, num_features], but the
-    # batch_size and max_stepsize can vary along each step
-    inputs = tf.placeholder(tf.float32, [None, None, num_features])
+# graph = tf.Graph()
+# with graph.as_default():
 
-    # Here we use sparse_placeholder that will generate a
-    # SparseTensor required by ctc_loss op.
-    targets = tf.sparse_placeholder(tf.int32)
 
-    # 1d array of size [batch_size]
-    seq_len = tf.placeholder(tf.int32, [None])
+# e.g: log filter bank or MFCC features
+# Has size [batch_size, max_stepsize, num_features], but the
+# batch_size and max_stepsize can vary along each step
+inputs = tf.placeholder(tf.float32, [None, None, num_features])
 
-    # Defining the cell
-    # Can be:
-    #   tf.nn.rnn_cell.RNNCell
-    #   tf.nn.rnn_cell.GRUCell
-    cell = rnn.LSTMCell(num_hidden, state_is_tuple=True)
+# Here we use sparse_placeholder that will generate a
+# SparseTensor required by ctc_loss op.
+targets = tf.sparse_placeholder(tf.int32)
 
-    # Stacking rnn cells
-    stack = rnn.MultiRNNCell([cell] * num_layers,
-                                        state_is_tuple=True)
+# 1d array of size [batch_size]
+seq_len = tf.placeholder(tf.int32, [None])
 
-    # The second output is the last state and we will no use that
-    outputs, _ = tf.nn.dynamic_rnn(stack, inputs, seq_len, dtype=tf.float32)
+# Defining the cell
+# Can be:
+#   tf.nn.rnn_cell.RNNCell
+#   tf.nn.rnn_cell.GRUCell
+cell = rnn.LSTMCell(num_hidden, state_is_tuple=True)
 
-    shape = tf.shape(inputs)
-    batch_s, max_timesteps = shape[0], shape[1]
+# Stacking rnn cells
+stack = rnn.MultiRNNCell([cell] * num_layers, state_is_tuple=True)
 
-    # Reshaping to apply the same weights over the timesteps
-    outputs = tf.reshape(outputs, [-1, num_hidden])
+# The second output is the last state and we will no use that
+outputs, _ = tf.nn.dynamic_rnn(stack, inputs, seq_len, dtype=tf.float32)
 
-    # Truncated normal with mean 0 and stdev=0.1
-    # Tip: Try another initialization
-    # see https://www.tensorflow.org/versions/r0.9/api_docs/python/contrib.layers.html#initializers
-    W = tf.Variable(tf.truncated_normal([num_hidden,
-                                         num_classes],
-                                        stddev=0.1))
-    # Zero initialization
-    # Tip: Is tf.zeros_initializer the same?
-    b = tf.Variable(tf.constant(0., shape=[num_classes]))
+shape = tf.shape(inputs)
+batch_s, max_timesteps = shape[0], shape[1]
 
-    # Doing the affine projection
-    logits = tf.matmul(outputs, W) + b
+# Reshaping to apply the same weights over the timesteps
+outputs = tf.reshape(outputs, [-1, num_hidden])
 
-    # Reshaping back to the original shape
-    logits = tf.reshape(logits, [batch_s, -1, num_classes])
+# Truncated normal with mean 0 and stdev=0.1
+# Tip: Try another initialization
+# see https://www.tensorflow.org/versions/r0.9/api_docs/python/contrib.layers.html#initializers
+weights = {
+    'out':tf.Variable(tf.truncated_normal([num_hidden, num_classes], stddev=0.1))
+}
+# Zero initialization
+# Tip: Is tf.zeros_initializer the same?
+biases = {
+    'out':tf.Variable(tf.constant(0., shape=[num_classes]))
+}
 
-    # Time major
-    logits = tf.transpose(logits, (1, 0, 2))
+# Doing the affine projection
+logits = tf.matmul(outputs, weights['out']) + biases['out']
 
-    loss = ctc_ops.ctc_loss(targets, logits, seq_len)
-    cost = tf.reduce_mean(loss)
+# Reshaping back to the original shape
+logits = tf.reshape(logits, [batch_s, -1, num_classes])
 
-    optimizer = tf.train.MomentumOptimizer(initial_learning_rate,
-                                           0.9).minimize(cost)
+# Time major
+logits = tf.transpose(logits, (1, 0, 2))
 
-    # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
-    # (it's slower but you'll get better results)
-    decoded, log_prob = ctc_ops.ctc_greedy_decoder(logits, seq_len)
+loss = ctc_ops.ctc_loss(targets, logits, seq_len)
+cost = tf.reduce_mean(loss)
 
-    # Inaccuracy: label error rate
-    ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
-                                          targets))
+optimizer = tf.train.MomentumOptimizer(initial_learning_rate,
+                                       0.9).minimize(cost)
 
-with tf.Session(graph=graph) as session:
+# Option 2: tf.contrib.ctc.ctc_beam_search_decoder
+# (it's slower but you'll get better results)
+decoded, log_prob = ctc_ops.ctc_greedy_decoder(logits, seq_len)
+
+# Inaccuracy: label error rate
+ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
+                                      targets))
+
+# Initialize the saver to save session.
+dict = {'weight_out': weights['out'], 'biases_out': biases['out']}
+saver = tf.train.Saver(dict)
+saved_model_path = cp.get('model', 'saved_model_path')
+with tf.Session() as session:
     # Initializate the weights and biases
     # init = tf.global_variables_initializer()
     # session.run(init)
 
-
-    # Initialize the saver to save session.
-    saver = tf.train.Saver()
-    saved_model_path = cp.get('model', 'saved_model_path')
     # Restore model weights from previously saved model
     load_path = saver.restore(session, saved_model_path)
     logging.info("Model restored from file: " + saved_model_path)

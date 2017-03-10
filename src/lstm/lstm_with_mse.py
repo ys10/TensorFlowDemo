@@ -52,7 +52,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 16
 display_batch = 1
-training_iters = 10
+training_iters = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -80,6 +80,13 @@ biases = {
     'out': tf.Variable(tf.random_normal([n_steps - truncated_step, n_classes]))
 }
 
+# Define a lstm cell with tensorflow
+lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
+# Drop out in case of over-fitting.
+lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
+# Stack two same lstm cell
+stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
+
 # Define LSTM as a RNN.
 def RNN(x, weights, biases, truncated_step):
 
@@ -94,25 +101,17 @@ def RNN(x, weights, biases, truncated_step):
     # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
     x = tf.split(x, n_steps, 0)
 
-    # Define a lstm cell with tensorflow
-    lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
-    # Drop out in case of over-fitting.
-    lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
-    # Stack two same lstm cell
-    cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
-
     # Initialize the states of LSTM.
     # cell.zero_state(batch_size, dtype = tf.float32)
     # states = tf.zeros([batch_size, n_hidden * n_layers])
-    states = cell.zero_state(batch_size, dtype=tf.float32)
+    states = stack.zero_state(batch_size, dtype=tf.float32)
     # BPTT
     # for i in range(truncated_step):
     #     outputs, states = cell(x[i][:][:], states)
-    _, states = rnn.static_rnn(cell, x[:truncated_step][:][:],
-                               initial_state= states, dtype=tf.float32)
+    _, states = rnn.static_rnn(stack, x[:truncated_step][:][:], initial_state= states, dtype=tf.float32)
     # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
     tf.get_variable_scope().reuse_variables()
-    outputs, states = rnn.static_rnn(cell, x[truncated_step:][:][:],
+    outputs, states = rnn.static_rnn(stack, x[truncated_step:][:][:],
                                      initial_state= states, dtype=tf.float32)
     # Permuting batch_size and n_steps.
     outputs = tf.transpose(outputs, [1, 0, 2])
@@ -137,7 +136,13 @@ config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.8
 
 # Initialize the saver to save session.
-saver = tf.train.Saver()
+# lstm = tf.Variable(stack , name="lstm")
+# variables_dict = {'weights_out': weights['out'], 'biases_out': biases['out'], 'lstm': stack}
+# saver = tf.train.Saver(variables_dict)
+# saved_model_path = cp.get('model', 'saved_model_path')
+
+dict = {'weight_out': weights['out'], 'biases_out': biases['out']}
+saver = tf.train.Saver(dict)
 saved_model_path = cp.get('model', 'saved_model_path')
 
 # Launch the graph
@@ -201,7 +206,8 @@ with tf.Session(config=config) as sess:
                 logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                       + ", Batch Loss= {:.6f}".format(loss)
                       + ", Training Accuracy= {:.5f}".format(acc))
+            break;
         # Save session by iteration.
-        saver.save(sess, saved_model_path + str(iter));
+        saver.save(sess, saved_model_path, global_step=iter);
         logging.info("Model saved successfully!")
     logging.info("Optimization Finished!")
