@@ -89,7 +89,7 @@ def get_data():
         logging.debug("Iter:" + str(iter))
         inputs = []
         labels = []
-        timesteps = []
+        seq_len = []
         # Break out of the training iteration while there is no trunk usable.
         if not all_trunk_names:
             break
@@ -132,9 +132,9 @@ def get_data():
                 batch_seq_len.append(sentence_len)
             inputs.append(batch_x)
             labels.append(batch_y)
-            timesteps.append(batch_seq_len)
+            seq_len.append(batch_seq_len)
             break
-    return inputs, labels, timesteps
+    return inputs, labels, seq_len
 
 # Constants
 SPACE_TOKEN = '<space>'
@@ -160,13 +160,15 @@ num_examples = 1
 num_batches_per_epoch = 1
 
 # inputs, labels = fake_data(num_examples, num_features, num_classes - 1)
-inputs, labels, timesteps = get_data()
+inputs, labels, seq_len = get_data()
 
 # You can preprocess the input data here
 train_inputs = inputs
 
 # You can preprocess the target data here
 train_targets = labels
+
+train_seq_len = seq_len
 
 # THE MAIN CODE!
 
@@ -240,17 +242,17 @@ ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
                                       targets))
 
 # Initialize the saver to save session.
-dict = {'weight_out': weights['out'], 'biases_out': biases['out']}
-saver = tf.train.Saver(dict)
-saved_model_path = cp.get('model', 'saved_model_path')
+# dict = {'weight_out': weights['out'], 'biases_out': biases['out']}
+# saver = tf.train.Saver(dict)
+# saved_model_path = cp.get('model', 'saved_model_path')
 with tf.Session() as session:
     # Initializate the weights and biases
-    # init = tf.global_variables_initializer()
-    # session.run(init)
+    init = tf.global_variables_initializer()
+    session.run(init)
 
     # Restore model weights from previously saved model
-    load_path = saver.restore(session, saved_model_path)
-    logging.info("Model restored from file: " + saved_model_path)
+    # load_path = saver.restore(session, saved_model_path)
+    # logging.info("Model restored from file: " + saved_model_path)
 
     for curr_epoch in range(num_epochs):
         train_cost = train_ler = 0
