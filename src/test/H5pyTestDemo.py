@@ -15,6 +15,12 @@ groups = open(group_file_name, 'r');
 # Read training data file.
 training_data = h5py.File(training_data_file_name, 'r')
 
+sentence_len = training_data['size/faem0_si1392']
+print(sentence_len.shape)
+print(sentence_len.dtype)
+print(sentence_len.value)
+
+
 # Get a group.
 print("keys: "+ str(training_data.keys()))
 # Tensors as input data.

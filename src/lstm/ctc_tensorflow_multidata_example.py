@@ -10,7 +10,6 @@ import time
 
 import tensorflow as tf
 from tensorflow.contrib import rnn
-import numpy as np
 
 try:
     from tensorflow.python.ops import ctc_ops
@@ -154,6 +153,7 @@ num_layers = 2
 batch_size = 16
 initial_learning_rate = 1e-2
 momentum = 0.9
+keep_prob = 1.0
 
 num_examples = 1
 # num_batches_per_epoch = int(num_examples/batch_size)
@@ -188,24 +188,6 @@ targets = tf.sparse_placeholder(tf.int32)
 # 1d array of size [batch_size]
 seq_len = tf.placeholder(tf.int32, [None])
 
-# Defining the cell
-# Can be:
-#   tf.nn.rnn_cell.RNNCell
-#   tf.nn.rnn_cell.GRUCell
-cell = rnn.LSTMCell(num_hidden, state_is_tuple=True)
-
-# Stacking rnn cells
-stack = rnn.MultiRNNCell([cell] * num_layers, state_is_tuple=True)
-
-# The second output is the last state and we will no use that
-outputs, _ = tf.nn.dynamic_rnn(stack, inputs, seq_len, dtype=tf.float32)
-
-shape = tf.shape(inputs)
-batch_s, max_timesteps = shape[0], shape[1]
-
-# Reshaping to apply the same weights over the timesteps
-outputs = tf.reshape(outputs, [-1, num_hidden])
-
 # Truncated normal with mean 0 and stdev=0.1
 # Tip: Try another initialization
 # see https://www.tensorflow.org/versions/r0.9/api_docs/python/contrib.layers.html#initializers
@@ -218,103 +200,133 @@ biases = {
     'out':tf.Variable(tf.constant(0., shape=[num_classes]))
 }
 
-# Doing the affine projection
-logits = tf.matmul(outputs, weights['out']) + biases['out']
+with tf.variable_scope("LSTM") as vs:
+    # Defining the cell
+    # Can be:
+    #   tf.nn.rnn_cell.RNNCell
+    #   tf.nn.rnn_cell.GRUCell
+    lstm_cell = rnn.LSTMCell(num_hidden, forget_bias=1.0)
+    # Drop out in case of over-fitting.
+    lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
+    # Stacking rnn cells
+    stack = rnn.MultiRNNCell([lstm_cell] * num_layers)
 
-# Reshaping back to the original shape
-logits = tf.reshape(logits, [batch_s, -1, num_classes])
+    def RNN(inputs, seq_len, weights, biases):
+        # The second output is the last state and we will no use that
+        outputs, _ = tf.nn.dynamic_rnn(stack, inputs, seq_len, dtype=tf.float32)
 
-# Time major
-logits = tf.transpose(logits, (1, 0, 2))
+        shape = tf.shape(inputs)
+        batch_s, max_timesteps = shape[0], shape[1]
 
-loss = ctc_ops.ctc_loss(targets, logits, seq_len)
-cost = tf.reduce_mean(loss)
+        # Reshaping to apply the same weights over the timesteps
+        outputs = tf.reshape(outputs, [-1, num_hidden])
 
-optimizer = tf.train.MomentumOptimizer(initial_learning_rate,
-                                       0.9).minimize(cost)
+        # Doing the affine projection
+        logits = tf.matmul(outputs, weights['out']) + biases['out']
 
-# Option 2: tf.contrib.ctc.ctc_beam_search_decoder
-# (it's slower but you'll get better results)
-decoded, log_prob = ctc_ops.ctc_greedy_decoder(logits, seq_len)
+        # Reshaping back to the original shape
+        logits = tf.reshape(logits, [batch_s, -1, num_classes])
 
-# Inaccuracy: label error rate
-ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
-                                      targets))
+        # Time major
+        logits = tf.transpose(logits, (1, 0, 2))
 
-# Initialize the saver to save session.
-# dict = {'weight_out': weights['out'], 'biases_out': biases['out']}
-# saver = tf.train.Saver(dict)
-# saved_model_path = cp.get('model', 'saved_model_path')
-with tf.Session() as session:
-    # Initializate the weights and biases
-    init = tf.global_variables_initializer()
-    session.run(init)
+        return logits
 
-    # Restore model weights from previously saved model
-    # load_path = saver.restore(session, saved_model_path)
-    # logging.info("Model restored from file: " + saved_model_path)
+    pred = RNN(inputs, seq_len, weights, biases)
 
-    for curr_epoch in range(num_epochs):
-        train_cost = train_ler = 0
-        start = time.time()
+    loss = ctc_ops.ctc_loss(targets, pred, seq_len)
+    cost = tf.reduce_mean(loss)
+    optimizer = tf.train.GradientDescentOptimizer(initial_learning_rate).minimize(cost)
+    # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
+    # (it's slower but you'll get better results)
+    decoded, log_prob = ctc_ops.ctc_greedy_decoder(pred, seq_len)
 
-        for batch in range(num_batches_per_epoch):
+    # Inaccuracy: label error rate
+    ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
+                                          targets))
+    # Initialize the saver to save session.
+    # dict = {'weight_out': weights['out'], 'biases_out': biases['out']}
+    # saver = tf.train.Saver(dict)
+    # saved_model_path = cp.get('model', 'saved_model_path')
+    # Initialize the saver to save session.
+    lstm_variables = [v for v in tf.global_variables()
+                        if v.name.startswith(vs.name)]
+    saver = tf.train.Saver(lstm_variables)
+    saved_model_path = cp.get('model', 'saved_model_path')
+    to_save_model_path = cp.get('model', 'to_save_model_path')
 
-            # Getting the index
-            # indexes = [i % num_examples for i in range(batch * batch_size, (batch + 1) * batch_size)]
+    with tf.Session() as sess:
+        # Initializate the weights and biases
+        init = tf.global_variables_initializer()
+        sess.run(init)
+        load_path = saver.restore(sess, saved_model_path)
+        logging.info("Model restored from file: " + saved_model_path)
+        logging.info("Start training!")
+        # Restore model weights from previously saved model
+        # load_path = saver.restore(session, saved_model_path)
+        # logging.info("Model restored from file: " + saved_model_path)
 
-            batch_train_inputs = train_inputs[batch]
-            # batch_train_inputs = train_inputs
-            # Padding input to max_time_step of this batch
-            batch_train_inputs, batch_train_seq_len = pad_sequences(batch_train_inputs)
+        for curr_epoch in range(num_epochs):
+            train_cost = train_ler = 0
+            start = time.time()
 
-            # Converting to sparse representation so as to to feed SparseTensor input
-            batch_train_targets = sparse_tuple_from(train_targets[batch])
-            # batch_train_targets = sparse_tuple_from(train_targets)
+            for batch in range(num_batches_per_epoch):
 
-            feed = {inputs: batch_train_inputs,
-                    targets: batch_train_targets,
-                    seq_len: batch_train_seq_len}
+                # Getting the index
+                # indexes = [i % num_examples for i in range(batch * batch_size, (batch + 1) * batch_size)]
 
-            batch_cost, _ = session.run([cost, optimizer], feed)
-            train_cost += batch_cost*batch_size
-            train_ler += session.run(ler, feed_dict=feed)*batch_size
+                batch_train_inputs = train_inputs[batch]
+                # batch_train_inputs = train_inputs
+                # Padding input to max_time_step of this batch
+                batch_train_inputs, batch_train_seq_len = pad_sequences(batch_train_inputs)
+
+                # Converting to sparse representation so as to to feed SparseTensor input
+                batch_train_targets = sparse_tuple_from(train_targets[batch])
+                # batch_train_targets = sparse_tuple_from(train_targets)
+
+                feed = {inputs: batch_train_inputs,
+                        targets: batch_train_targets,
+                        seq_len: batch_train_seq_len}
+
+                batch_cost, _ = sess.run([cost, optimizer], feed)
+                train_cost += batch_cost*batch_size
+                train_ler += sess.run(ler, feed_dict=feed)*batch_size
 
 
-        # Shuffle the data
-        # shuffled_indexes = np.random.permutation(num_examples)
-        shuffled_indexes = 0
-        train_inputs = train_inputs[shuffled_indexes]
-        train_targets = train_targets[shuffled_indexes]
+            # Shuffle the data
+            # shuffled_indexes = np.random.permutation(num_examples)
+            shuffled_indexes = 0
+            train_inputs = train_inputs[shuffled_indexes]
+            train_targets = train_targets[shuffled_indexes]
 
-        # Metrics mean
-        train_cost /= num_examples
-        train_ler /= num_examples
+            # Metrics mean
+            train_cost /= num_examples
+            train_ler /= num_examples
 
-        log = "Epoch {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
-        logging.info(log.format(curr_epoch+1, num_epochs, train_cost, train_ler, time.time() - start))
+            log = "Epoch {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
+            logging.info(log.format(curr_epoch+1, num_epochs, train_cost, train_ler, time.time() - start))
 
-    # Decoding all at once. Note that this isn't the best way
+        # Decoding all at once. Note that this isn't the best way
 
-    # Padding input to max_time_step of this batch
-    batch_train_inputs, batch_train_seq_len = pad_sequences(train_inputs)
+        # Padding input to max_time_step of this batch
+        batch_train_inputs, batch_train_seq_len = pad_sequences(train_inputs)
 
-    # Converting to sparse representation so as to to feed SparseTensor input
-    batch_train_targets = sparse_tuple_from(train_targets)
+        # Converting to sparse representation so as to to feed SparseTensor input
+        batch_train_targets = sparse_tuple_from(train_targets)
 
-    feed = {inputs: batch_train_inputs,
-            targets: batch_train_targets,
-            seq_len: batch_train_seq_len
-            }
+        feed = {inputs: batch_train_inputs,
+                targets: batch_train_targets,
+                seq_len: batch_train_seq_len
+                }
 
-    # Decoding
-    d = session.run(decoded[0], feed_dict=feed)
-    dense_decoded = tf.sparse_tensor_to_dense(d, default_value=-1).eval(session=session)
+        # Decoding
+        d = sess.run(decoded[0], feed_dict=feed)
+        dense_decoded = tf.sparse_tensor_to_dense(d, default_value=-1).eval(session=sess)
 
-    for i, seq in enumerate(dense_decoded):
+        for i, seq in enumerate(dense_decoded):
 
-        seq = [s for s in seq if s != -1]
+            seq = [s for s in seq if s != -1]
 
-        logging.debug('Sequence %d' % i)
-        logging.debug('\t Original:\n%s' % train_targets[i])
-        logging.debug('\t Decoded:\n%s' % seq)
+            logging.debug('Sequence %d' % i)
+            logging.debug('\t Original:\n%s' % train_targets[i])
+            logging.debug('\t Decoded:\n%s' % seq)
