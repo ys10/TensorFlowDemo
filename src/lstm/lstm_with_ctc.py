@@ -57,9 +57,9 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
 learning_rate = 0.001
-batch_size = 777
+batch_size = 16
 display_batch = 1
-training_iters = 10
+training_iters = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -72,7 +72,7 @@ n_layers = 2 # num of hidden layers
 n_classes = 49 # total classes
 
 # tf Graph input
-x = tf.placeholder(tf.float32, [None, None, n_input])
+x = tf.placeholder(tf.float32, [batch_size, None, n_input])
 y = tf.sparse_placeholder(tf.int32, [None, n_classes])
 seq_len = tf.placeholder(tf.int32, [None])
 
@@ -125,7 +125,7 @@ def RNN(x, seq_len, weights, biases):
     # The first dim of outputs & weights must be same.
     logits = tf.matmul(outputs, weights['out']) + biases['out']
     logits = tf.reshape(logits, [batch_size, -1, n_classes])
-    logits = tf.transpose(logits, (1, 0, 2))
+    # logits = tf.transpose(logits, (1, 0, 2))
     #
     # logits = tf.reshape(logits, [batch_size, None, n_classes])
     return logits
@@ -204,12 +204,13 @@ with tf.Session(config=config) as sess:
                 # sentence_y is a tensor of shape (None)
                 sentence_y = training_data_file['target/' + trunk_name.strip('\n')]
                 # sentence_len is a tensor of shape (None)
-                sentence_len = training_data_file['size/' + trunk_name.strip('\n')]
+                sentence_len = training_data_file['size/' + trunk_name.strip('\n')].value
                 # Add current trunk into the batch.
                 batch_x.append(sentence_x)
                 batch_y.append(sentence_y)
+                batch_seq_len.append(sentence_len)
                 # batch_seq_len.append(sentence_len)
-            batch_x, batch_seq_len = pad_sequences(batch_x)
+            batch_x, _ = pad_sequences(batch_x)
             batch_y = sparse_tuple_from(batch_y)
             # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
             # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
