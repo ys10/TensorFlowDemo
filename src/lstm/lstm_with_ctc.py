@@ -60,7 +60,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 16
 display_batch = 1
-training_iters = 1
+training_iters = 10
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -246,7 +246,7 @@ with tf.variable_scope("LSTM") as vs:
                     # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                     #       + ", Batch Loss= {:.6f}".format(loss)
                     #       + ", Training Accuracy= {:.5f}".format(acc))
-                break;
+                # break;
             # Metrics mean
             train_cost /= (batch_size * n_batches)
             train_ler /= (batch_size * n_batches)
