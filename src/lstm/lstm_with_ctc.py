@@ -6,6 +6,7 @@ Project: https://github.com/ys10/TensorFlowDemo
 
 from __future__ import print_function
 
+import time
 import configparser
 import logging
 import tensorflow as tf
@@ -152,7 +153,7 @@ with tf.variable_scope("LSTM") as vs:
 
     # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
     # (it's slower but you'll get better results)
-    decoded, log_prob = ctc_ops.ctc_greedy_decoder(pred, seq_len)
+    decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
     ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
@@ -180,6 +181,8 @@ with tf.variable_scope("LSTM") as vs:
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
         for iter in range(0, training_iters, 1):
+            train_cost = train_ler = 0
+            start = time.time()
             # For each iteration.
             logging.debug("Iter:" + str(iter))
             # Break out of the training iteration while there is no trunk usable.
@@ -228,7 +231,10 @@ with tf.variable_scope("LSTM") as vs:
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
-                sess.run(optimizer, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
+                feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
+                batch_cost, _ = sess.run([cost, optimizer], feed_dict)
+                train_cost += batch_cost * batch_size
+                train_ler += sess.run(ler, feed_dict) * batch_size
                 # Print accuracy by display_batch.
                 if batch % display_batch == 0:
                     # Calculate batch accuracy.
@@ -241,6 +247,11 @@ with tf.variable_scope("LSTM") as vs:
                     #       + ", Batch Loss= {:.6f}".format(loss)
                     #       + ", Training Accuracy= {:.5f}".format(acc))
                 break;
+            # Metrics mean
+            train_cost /= (batch_size * n_batches)
+            train_ler /= (batch_size * n_batches)
+            log = "Iter {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
+            logging.info(log.format(iter+1, training_iters, train_cost, train_ler, time.time() - start))
             # Save session by iteration.
             saver.save(sess, to_save_model_path + str(iter));
             logging.info("Model saved successfully!")
