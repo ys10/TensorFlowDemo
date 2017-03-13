@@ -253,6 +253,6 @@ with tf.variable_scope("LSTM") as vs:
             log = "Iter {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(iter+1, training_iters, train_cost, train_ler, time.time() - start))
             # Save session by iteration.
-            saver.save(sess, to_save_model_path + str(iter));
+            saver.save(sess, to_save_model_path, global_step=iter);
             logging.info("Model saved successfully!")
         logging.info("Optimization Finished!")
