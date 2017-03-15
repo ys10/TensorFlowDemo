@@ -70,19 +70,17 @@ n_classes = 49 # total classes
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
 y = tf.placeholder("int32", [batch_size, n_steps - truncated_step, n_classes])
 
-# Define parameters of full connection between the second LSTM layer and output layer.
-# Define weights.
-weights = {
-    'out': tf.Variable(tf.random_normal([batch_size, n_hidden, n_classes]))
-}
-# weights = tf.Variable(tf.random_normal([batch_size, n_hidden, n_classes]))
-# Define biases.
-biases = {
-    'out': tf.Variable(tf.random_normal([n_steps - truncated_step, n_classes]))
-}
-# biases = tf.Variable(tf.random_normal([n_steps - truncated_step, n_classes]))
 
 with tf.variable_scope("LSTM") as vs:
+    # Define parameters of full connection between the second LSTM layer and output layer.
+    # Define weights.
+    weights = {
+        'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
+    }
+    # Define biases.
+    biases = {
+        'out': tf.Variable(tf.random_normal([n_classes]))
+    }
 
     # Define a lstm cell with tensorflow
     lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
@@ -117,12 +115,19 @@ with tf.variable_scope("LSTM") as vs:
         tf.get_variable_scope().reuse_variables()
         outputs, states = rnn.static_rnn(stack, x[truncated_step:][:][:],
                                          initial_state= states, dtype=tf.float32)
+        outputs = tf.reshape(outputs, [-1, n_hidden])
         # Permuting batch_size and n_steps.
-        outputs = tf.transpose(outputs, [1, 0, 2])
+
+        # outputs = tf.transpose(outputs, [1, 0, 2])
+
         # Now, shape of outputs is (batch_size, n_steps, n_input)
         # Linear activation, using rnn inner loop last output
         # The first dim of outputs & weights must be same.
-        return tf.matmul(outputs, weights['out']) + biases['out']
+        logits = tf.matmul(outputs, weights['out']) + biases['out']
+        logits = tf.reshape(logits, [batch_size, -1, n_classes])
+        # Time major
+        # logits = tf.transpose(logits, (1, 0, 2))
+        return logits
 
     # Define prediction of RNN(LSTM).
     pred = RNN(x, weights, biases, truncated_step)
@@ -211,7 +216,7 @@ with tf.variable_scope("LSTM") as vs:
                     logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                           + ", Batch Loss= {:.6f}".format(loss)
                           + ", Training Accuracy= {:.5f}".format(acc))
-                # break;
+                break;
             # Save session by iteration.
             saver.save(sess, saved_model_path, global_step=iter);
             logging.info("Model saved successfully!")

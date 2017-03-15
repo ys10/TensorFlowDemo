@@ -79,17 +79,17 @@ seq_len = tf.placeholder(tf.int32, [None])
 
 # Define parameters of full connection between the second LSTM layer and output layer.
 # Define weights.
-weights = {
-    # 'out': tf.Variable(tf.random_normal([n_hidden, n_classes], dtype=tf.float64), dtype = tf.float64)
-    'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
-}
-# Define biases.
-biases = {
-    # 'out': tf.Variable(tf.random_normal([n_classes], dtype=tf.float64), dtype = tf.float64)
-    'out': tf.Variable(tf.random_normal([n_classes]))
-}
 
 with tf.variable_scope("LSTM") as vs:
+    weights = {
+        # 'out': tf.Variable(tf.random_normal([n_hidden, n_classes], dtype=tf.float64), dtype = tf.float64)
+        'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
+    }
+    # Define biases.
+    biases = {
+        # 'out': tf.Variable(tf.random_normal([n_classes], dtype=tf.float64), dtype = tf.float64)
+        'out': tf.Variable(tf.random_normal([n_classes]))
+    }
 
     # Define a lstm cell with tensorflow
     lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
@@ -125,7 +125,6 @@ with tf.variable_scope("LSTM") as vs:
         # states = cell.zero_state(batch_size, dtype=tf.float32)
 
         # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
-        # tf.get_variable_scope().reuse_variables()
         outputs, states = tf.nn.dynamic_rnn(stack, x, seq_len, dtype=tf.float32)
         # Permuting batch_size and n_steps.
         # outputs = tf.transpose(outputs, [1, 0, 2])
@@ -246,7 +245,7 @@ with tf.variable_scope("LSTM") as vs:
                     # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                     #       + ", Batch Loss= {:.6f}".format(loss)
                     #       + ", Training Accuracy= {:.5f}".format(acc))
-                # break;
+                break;
             # Metrics mean
             train_cost /= (batch_size * n_batches)
             train_ler /= (batch_size * n_batches)
