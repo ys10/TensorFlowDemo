@@ -22,12 +22,16 @@ except ImportError:
     from tensorflow.contrib.ctc import ctc_ops
 
 
+# Import configuration by config parser.
+cp = configparser.ConfigParser()
+cp.read('../../conf/ctc/lstm.ini')
+
 # Config the logger.
 # Output into log file.
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
-                filename='../../log/app.log',
+                filename=cp.get('log', 'log_dir') + time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime()) + '.log',
                 filemode='w')
 # Output to the console.
 console = logging.StreamHandler()
@@ -35,10 +39,6 @@ console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
-
-# Import configuration by config parser.
-cp = configparser.ConfigParser()
-cp.read('../../conf/ctc/lstm.conf')
 
 # Import data set
 # Name of file storing trunk names.

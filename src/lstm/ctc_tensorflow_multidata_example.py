@@ -28,12 +28,17 @@ import configparser
 import logging
 import h5py
 from math import ceil
+
+# Import configuration by config parser.
+cp = configparser.ConfigParser()
+cp.read('../../conf/ctc/lstm.ini')
+
 # Config the logger.
 # Output into log file.
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
-                filename='../../log/app.log',
+                filename=cp.get('log', 'log_dir') + time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime()) + '.log',
                 filemode='w')
 # Output to the console.
 console = logging.StreamHandler()
@@ -41,10 +46,6 @@ console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
-
-# Import configuration by config parser.
-cp = configparser.ConfigParser()
-cp.read('../../conf/ctc/lstm.conf')
 
 # Import data set
 # Name of file storing trunk names.
@@ -55,7 +56,6 @@ training_data_file_name = cp.get('data', 'training_data_file_name')
 trunk_names_file = open(trunk_names_file_name, 'r')
 # Read training data set.
 training_data_file = h5py.File(training_data_file_name, 'r')
-
 
 # def fake_data(num_examples, num_features, num_labels, min_size = 10, max_size=100):
 #
