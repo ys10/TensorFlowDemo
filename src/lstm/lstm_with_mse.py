@@ -13,6 +13,7 @@ import h5py
 from math import ceil
 from tensorflow.contrib import rnn
 import time
+import os
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
@@ -20,10 +21,14 @@ cp.read('../../conf/mse/lstm.ini')
 
 # Config the logger.
 # Output into log file.
+log_file_name = cp.get('log', 'log_dir') + time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())+'.log'
+if not os.path.exists(log_file_name):
+    f = open(log_file_name, 'w')
+    f.close()
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
-                filename=cp.get('log', 'log_dir') + time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())+'.log' ,
+                filename= log_file_name ,
                 filemode='w')
 # Output to the console.
 console = logging.StreamHandler()

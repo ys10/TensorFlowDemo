@@ -6,7 +6,7 @@ Project: https://github.com/ys10/TensorFlowDemo
 
 from __future__ import print_function
 
-import time
+import time, os
 import configparser
 import logging
 import tensorflow as tf
@@ -28,10 +28,14 @@ cp.read('../../conf/ctc/lstm.ini')
 
 # Config the logger.
 # Output into log file.
-logging.basicConfig(level=logging.DEBUG,
-                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+log_file_name = cp.get('log', 'log_dir') + time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())+'.log'
+if not os.path.exists(log_file_name):
+    f = open(log_file_name, 'w')
+    f.close()
+logging.basicConfig(level = logging.DEBUG,
+                format = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
-                filename=cp.get('log', 'log_dir') + time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime()) + '.log',
+                filename=log_file_name,
                 filemode='w')
 # Output to the console.
 console = logging.StreamHandler()
