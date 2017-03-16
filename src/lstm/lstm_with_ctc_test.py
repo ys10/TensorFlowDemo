@@ -24,7 +24,7 @@ except ImportError:
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
-cp.read('../../conf/ctc/lstm.ini')
+cp.read('../../conf/ctc/test.ini')
 
 # Config the logger.
 # Output into log file.
@@ -170,7 +170,7 @@ with tf.variable_scope("LSTM") as vs:
         # Initializing the variables
         init = tf.global_variables_initializer()
         sess.run(init)
-        load_path = saver.restore(sess, saved_model_path)
+        saver.restore(sess, saved_model_path)
         logging.info("Model restored from file: " + saved_model_path)
         # Keep training until reach max iterations
         logging.info("Start training!")

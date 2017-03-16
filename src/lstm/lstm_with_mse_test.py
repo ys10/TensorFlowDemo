@@ -17,7 +17,7 @@ import os
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
-cp.read('../../conf/mse/lstm.ini')
+cp.read('../../conf/mse/test.ini')
 
 # Config the logger.
 # Output into log file.
@@ -41,11 +41,11 @@ logging.getLogger('').addHandler(console)
 # Name of file storing trunk names.
 trunk_names_file_name = cp.get('data', 'trunk_names_file_name')
 # Name of HDF5 file as training data set.
-training_data_file_name = cp.get('data', 'training_data_file_name')
+test_data_file_name = cp.get('data', 'test_data_file_name')
 # Read trunk names.
 trunk_names_file = open(trunk_names_file_name, 'r')
 # Read training data set.
-training_data_file = h5py.File(training_data_file_name, 'r')
+training_data_file = h5py.File(test_data_file_name, 'r')
 # Output file name.
 outpout_data_file_name = cp.get('result', 'output_data_file_dir')+ time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())+'.hdf5'
 if not os.path.exists(outpout_data_file_name):
@@ -109,8 +109,8 @@ with tf.variable_scope("LSTM") as vs:
 
     # Define output saving function
     def output_data_saving(trunk_name, logits, outputs):
-        linear_grp.create_dataset(trunk_name, data = logits)
-        lstm_grp.create_dataset(trunk_name, data = outputs)
+        linear_grp.create_dataset(trunk_name, data = logits, dtype = 'f')
+        lstm_grp.create_dataset(trunk_name, data = outputs, dtype = 'f')
         return
 
     # Define LSTM as a RNN.
@@ -166,6 +166,8 @@ with tf.variable_scope("LSTM") as vs:
         # Initializing the variables
         init = tf.global_variables_initializer()
         sess.run(init)
+        saver.restore(sess, saved_model_path)
+        logging.info("Model restored from file: " + saved_model_path)
         # Keep training until reach max iterations
         logging.info("Start training!")
         # Read all trunk names.
