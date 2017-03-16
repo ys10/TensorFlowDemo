@@ -38,7 +38,7 @@ logging.getLogger('').addHandler(console)
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
-cp.read('../../conf/lstm_with_ctc_data.ini')
+cp.read('../../conf/ctc/lstm.conf')
 
 # Import data set
 # Name of file storing trunk names.
@@ -167,6 +167,7 @@ with tf.variable_scope("LSTM") as vs:
     saver = tf.train.Saver(lstm_variables)
     saved_model_path = cp.get('model', 'saved_model_path')
     to_save_model_path = cp.get('model', 'to_save_model_path')
+
 
     # Launch the graph
     with tf.Session(config=config) as sess:

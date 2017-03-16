@@ -44,7 +44,7 @@ logging.getLogger('').addHandler(console)
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
-cp.read('../../conf/lstm_with_ctc_data.ini')
+cp.read('../../conf/ctc/lstm.conf')
 
 # Import data set
 # Name of file storing trunk names.
