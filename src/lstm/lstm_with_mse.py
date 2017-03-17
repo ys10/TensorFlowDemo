@@ -217,7 +217,7 @@ with tf.variable_scope("LSTM") as vs:
                     logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                           + ", Batch Loss= {:.6f}".format(loss)
                           + ", Training Accuracy= {:.5f}".format(acc))
-                break;
+                # break;
             # Save session by iteration.
             saver.save(sess, saved_model_path, global_step=iter);
             logging.info("Model saved successfully!")

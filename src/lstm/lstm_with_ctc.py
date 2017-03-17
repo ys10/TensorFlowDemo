@@ -250,7 +250,7 @@ with tf.variable_scope("LSTM") as vs:
                     # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                     #       + ", Batch Loss= {:.6f}".format(loss)
                     #       + ", Training Accuracy= {:.5f}".format(acc))
-                break;
+                # break;
             # Metrics mean
             train_cost /= (batch_size * n_batches)
             train_ler /= (batch_size * n_batches)
