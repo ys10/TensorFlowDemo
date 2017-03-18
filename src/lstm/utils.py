@@ -87,3 +87,25 @@ def pad_sequences(sequences, maxlen=None, dtype=np.float32,
         else:
             raise ValueError('Padding type "%s" not understood' % padding)
     return x, lengths
+
+def tensor_to_array(tensor):
+    if len(tensor.shape) < 1:
+        return []
+    array = []
+    for i in range(0, tensor.shape[0], 1):
+        if len(tensor.shape) == 1:
+            sub_array = tensor[i]
+        else :
+            sub_array = tensor_to_array(tensor[i])
+        array.append(sub_array)
+
+    # if len(tensor.shape) ==1 :
+    #     for i in range(0, tensor.shape[0], 1):
+    #         sub_array = tensor[i]
+    #         array.append(sub_array)
+    # else :
+    #     for i in range(0, tensor.shape[0], 1):
+    #         sub_array = tensor_to_array(tensor[i])
+    #         array.append(sub_array)
+
+    return array

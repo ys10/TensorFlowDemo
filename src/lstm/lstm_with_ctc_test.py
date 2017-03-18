@@ -15,6 +15,7 @@ from math import ceil
 from tensorflow.contrib import rnn
 from src.lstm.utils import pad_sequences as pad_sequences
 from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
+from src.lstm.utils import tensor_to_array
 
 try:
     from tensorflow.python.ops import ctc_ops
@@ -72,7 +73,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
 learning_rate = 0.001
-batch_size = 16
+batch_size = 1
 display_batch = 1
 training_iters = 10
 # For dropout to prevent over-fitting.
@@ -116,13 +117,16 @@ with tf.variable_scope("LSTM") as vs:
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
     # Define output saving function
-    def output_data_saving(trunk_name, logits, outputs):
-        linear_grp.create_dataset(trunk_name, data = logits)
-        lstm_grp.create_dataset(trunk_name, data = outputs)
+    def output_data_saving(lstm_grp, linear_grp, trunk_name, logits, outputs):
+        # Sub group.
+        logits_array = tensor_to_array(logits)
+        linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
+        outputs_array = tensor_to_array(outputs)
+        lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
         return
 
     # Define LSTM as a RNN.
-    def RNN(x, seq_len, weights, biases, trunk_name):
+    def RNN(x, seq_len, weights, biases):
 
         # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
         outputs, states = tf.nn.dynamic_rnn(stack, x, seq_len, dtype=tf.float32)
@@ -134,12 +138,10 @@ with tf.variable_scope("LSTM") as vs:
         logits = tf.matmul(outputs, weights['out']) + biases['out']
         logits = tf.reshape(logits, [batch_size, -1, n_classes])
         logits = tf.nn.softmax(logits)
-        #
-        output_data_saving(trunk_name, logits, outputs)
-        return logits
+        return logits, outputs
 
     # Define prediction of RNN(LSTM).
-    pred = RNN(x, seq_len, weights, biases, trunk_name)
+    pred, outputs = RNN(x, seq_len, weights, biases)
 
     # Define loss and optimizer.
     cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
@@ -180,6 +182,10 @@ with tf.variable_scope("LSTM") as vs:
             start = time.time()
             # For each iteration.
             logging.debug("Iter:" + str(iter))
+            # Output groups.
+            iter_grp = outpout_data_file.create_group("iter" + str(iter))
+            lstm_grp = iter_grp.create_group("lstm_output")
+            linear_grp = iter_grp.create_group("linear_output")
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
@@ -207,9 +213,13 @@ with tf.variable_scope("LSTM") as vs:
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
-                feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len, trunk_name: trunk_name}
+                feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
                 # Calculate batch loss.
                 loss = sess.run(cost, feed_dict)
+                #
+                linear_outputs  = sess.run(pred, feed_dict)
+                lstm_outputs = sess.run(outputs, feed_dict)
+                output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
                 logging.debug("Trunk name:" + str(trunk_name)
                               + ", Batch Loss= {:.6f}".format(loss)
                               + ", time = {:.3f}".format(time.time() - start))

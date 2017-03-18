@@ -10,11 +10,10 @@ import configparser
 import logging
 import tensorflow as tf
 import h5py
-from math import ceil
 from tensorflow.contrib import rnn
 import time
 import os
-
+from src.lstm.utils import tensor_to_array
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
 cp.read('../../conf/mse/test.ini')
@@ -54,8 +53,8 @@ if not os.path.exists(outpout_data_file_name):
 # Output files.
 outpout_data_file = h5py.File(outpout_data_file_name, 'w')
 #
-lstm_grp = outpout_data_file.create_group("lstm_output")
-linear_grp = outpout_data_file.create_group("linear_output")
+# lstm_grp = outpout_data_file.create_group("lstm_output")
+# linear_grp = outpout_data_file.create_group("linear_output")
 
 '''
 To classify vector using a recurrent neural network,
@@ -83,7 +82,7 @@ n_layers = 2 # num of hidden layers
 n_classes = 49 # total classes
 
 #
-trunk_name = ''
+# trunk_name = ''
 
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
@@ -108,13 +107,16 @@ with tf.variable_scope("LSTM") as vs:
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
     # Define output saving function
-    def output_data_saving(trunk_name, logits, outputs):
-        linear_grp.create_dataset(trunk_name, data = logits, dtype = 'f')
-        lstm_grp.create_dataset(trunk_name, data = outputs, dtype = 'f')
+    def output_data_saving(lstm_grp, linear_grp, trunk_name, logits, outputs):
+        # Sub group.
+        logits_array = tensor_to_array(logits)
+        linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
+        outputs_array = tensor_to_array(outputs)
+        lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
         return
 
     # Define LSTM as a RNN.
-    def RNN(x, weights, biases, trunk_name):
+    def RNN(x, weights, biases):
         # Permuting batch_size and n_steps
         x = tf.transpose(x, [1, 0, 2])
         # Reshaping to (n_steps*batch_size, n_input)
@@ -132,11 +134,10 @@ with tf.variable_scope("LSTM") as vs:
         logits = tf.reshape(logits, [batch_size, -1, n_classes])
         logits = tf.nn.softmax(logits)
         #
-        output_data_saving(trunk_name, logits, outputs)
-        return logits
+        return logits, outputs
 
     # Define prediction of RNN(LSTM).
-    pred = RNN(x, weights, biases, trunk_name)
+    pred, outputs = RNN(x, weights, biases)
 
     # Define loss and optimizer.
     loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
@@ -176,35 +177,44 @@ with tf.variable_scope("LSTM") as vs:
             start = time.time()
             # For each iteration.
             logging.debug("Iter:" + str(iter))
+            # Output groups.
+            iter_grp = outpout_data_file.create_group("iter" + str(iter))
+            lstm_grp = iter_grp.create_group("lstm_output")
+            linear_grp = iter_grp.create_group("linear_output")
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
-            trunk_name = ''
+            # trunk_name = ''
             # Traverse all trunks of a batch.
             for trunk_name in all_trunk_names:
+                trunk_name = trunk_name.strip('\n')
                 # Define two variables to store input data.
                 batch_x = []
                 batch_y = []
                 # Get trunk data by trunk name without line break character.
                 # trunk_x is a tensor of shape (n_steps, n_inputs)
-                trunk_x = training_data_file['source/' + trunk_name.strip('\n')]
+                trunk_x = training_data_file['source/' + trunk_name]
                 # trunk_y is a tensor of shape (n_steps - truncated_step, n_classes)
-                trunk_y = training_data_file['target/' + trunk_name.strip('\n')]
+                trunk_y = training_data_file['target/' + trunk_name]
                 # Add current trunk into the batch.
                 batch_x.append(trunk_x)
                 batch_y.append(trunk_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
-                feed_dict = {x: batch_x, y: batch_y, trunk_name: trunk_name}
+                feed_dict = {x: batch_x, y: batch_y}
                 # Print accuracy by display_batch.
                 # Calculate batch accuracy.
                 acc = sess.run(accuracy, feed_dict)
                 # Calculate batch loss.
                 loss = sess.run(cost, feed_dict)
+                #
+                linear_outputs  = sess.run(pred, feed_dict)
+                lstm_outputs = sess.run(outputs, feed_dict)
+                output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
                 logging.debug("Trunk name:" + str(trunk_name)
                               + ", Batch Loss= {:.6f}".format(loss)
                               + ", Training Accuracy= {:.5f}".format(acc)
                               + ", time = {:.3f}".format(time.time() - start))
-            break;
+                break;
         logging.info("Testing Finished!")

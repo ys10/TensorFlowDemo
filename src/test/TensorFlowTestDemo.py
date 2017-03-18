@@ -12,3 +12,4 @@ print(sess.run(states))
 # Initialize variable.
 sess.run(tf.global_variables_initializer())
 print(sess.run(variable))
+
