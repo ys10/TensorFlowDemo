@@ -216,5 +216,5 @@ with tf.variable_scope("LSTM") as vs:
                               + ", Batch Loss= {:.6f}".format(loss)
                               + ", Training Accuracy= {:.5f}".format(acc)
                               + ", time = {:.3f}".format(time.time() - start))
-                break;
+                # break;
         logging.info("Testing Finished!")

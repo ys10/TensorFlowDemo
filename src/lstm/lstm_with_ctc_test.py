@@ -223,5 +223,5 @@ with tf.variable_scope("LSTM") as vs:
                 logging.debug("Trunk name:" + str(trunk_name)
                               + ", Batch Loss= {:.6f}".format(loss)
                               + ", time = {:.3f}".format(time.time() - start))
-            break;
+            # break;
         logging.info("Testing Finished!")
