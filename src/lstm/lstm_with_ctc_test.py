@@ -92,7 +92,7 @@ trunk_name = ''
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [batch_size, None, n_input])
-y = tf.sparse_placeholder(tf.int32, [None, n_classes])
+# y = tf.sparse_placeholder(tf.int32, [None, n_classes])
 seq_len = tf.placeholder(tf.int32, [None])
 
 # Define parameters of full connection between the second LSTM layer and output layer.
@@ -200,28 +200,25 @@ with tf.variable_scope("LSTM") as vs:
                 # sentence_x is a tensor of shape (n_steps, n_inputs)
                 sentence_x = test_data_file['source/' + trunk_name.strip('\n')]
                 # sentence_y is a tensor of shape (None)
-                sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
+                # sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
                 # sentence_len is a tensor of shape (None)
                 sentence_len = test_data_file['size/' + trunk_name.strip('\n')].value
                 # Add current trunk into the batch.
                 batch_x.append(sentence_x)
-                batch_y.append(sentence_y)
+                # batch_y.append(sentence_y)
                 batch_seq_len.append(sentence_len)
                 # Padding.
                 batch_x, _ = pad_sequences(batch_x)
-                batch_y = sparse_tuple_from(batch_y)
+                # batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
-                feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
+                feed_dict = {x: batch_x, seq_len: batch_seq_len}
                 # Calculate batch loss.
-                loss = sess.run(cost, feed_dict)
                 #
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
                 output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
-                logging.debug("Trunk name:" + str(trunk_name)
-                              + ", Batch Loss= {:.6f}".format(loss)
-                              + ", time = {:.3f}".format(time.time() - start))
+                logging.debug("Trunk name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
             # break;
         logging.info("Testing Finished!")

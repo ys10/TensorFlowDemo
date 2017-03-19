@@ -86,7 +86,7 @@ n_classes = 49 # total classes
 
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
-y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
+# y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
 
 with tf.variable_scope("LSTM") as vs:
     # Define parameters of full connection between the second LSTM layer and output layer.
@@ -140,13 +140,13 @@ with tf.variable_scope("LSTM") as vs:
     pred, outputs = RNN(x, weights, biases)
 
     # Define loss and optimizer.
-    loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
-    cost = tf.reduce_mean(loss)
+    # loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
+    # cost = tf.reduce_mean(loss)
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
-    correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
-    accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+    # correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
+    # accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
     # Configure session
     config = tf.ConfigProto()
@@ -190,7 +190,7 @@ with tf.variable_scope("LSTM") as vs:
                 trunk_name = trunk_name.strip('\n')
                 # Define two variables to store input data.
                 batch_x = []
-                batch_y = []
+                # batch_y = []
                 # Get trunk data by trunk name without line break character.
                 # trunk_x is a tensor of shape (n_steps, n_inputs)
                 trunk_x = training_data_file['source/' + trunk_name]
@@ -198,23 +198,22 @@ with tf.variable_scope("LSTM") as vs:
                 trunk_y = training_data_file['target/' + trunk_name]
                 # Add current trunk into the batch.
                 batch_x.append(trunk_x)
-                batch_y.append(trunk_y)
+                # batch_y.append(trunk_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
-                feed_dict = {x: batch_x, y: batch_y}
+                # feed_dict = {x: batch_x, y: batch_y}
+                feed_dict = {x: batch_x}
                 # Print accuracy by display_batch.
                 # Calculate batch accuracy.
-                acc = sess.run(accuracy, feed_dict)
+                # acc = sess.run(accuracy, feed_dict)
                 # Calculate batch loss.
-                loss = sess.run(cost, feed_dict)
+                # loss = sess.run(cost, feed_dict)
                 #
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
                 output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
                 logging.debug("Trunk name:" + str(trunk_name)
-                              + ", Batch Loss= {:.6f}".format(loss)
-                              + ", Training Accuracy= {:.5f}".format(acc)
                               + ", time = {:.3f}".format(time.time() - start))
                 # break;
         logging.info("Testing Finished!")
