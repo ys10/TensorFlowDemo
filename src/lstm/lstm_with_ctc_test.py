@@ -144,7 +144,7 @@ with tf.variable_scope("LSTM") as vs:
     pred, outputs = RNN(x, seq_len, weights, biases)
 
     # Define loss and optimizer.
-    cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
+    # cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
@@ -156,7 +156,7 @@ with tf.variable_scope("LSTM") as vs:
     decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
-    ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
+    # ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
 
     # Configure session
     config = tf.ConfigProto()
