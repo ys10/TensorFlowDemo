@@ -226,5 +226,5 @@ with tf.variable_scope("LSTM") as vs:
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
                 logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
                 trunk += 1
-            break;
+            # break;
         logging.info("Testing Finished!")
