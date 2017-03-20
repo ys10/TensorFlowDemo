@@ -117,12 +117,14 @@ with tf.variable_scope("LSTM") as vs:
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
     # Define output saving function
-    def output_data_saving(lstm_grp, linear_grp, trunk_name, logits, outputs):
+    def output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, logits, outputs, decode):
         # Sub group.
         logits_array = tensor_to_array(logits)
         linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
         outputs_array = tensor_to_array(outputs)
         lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
+        # decode_array = tf.cast(decoded[0], tf.int32)
+        decode_grp.create_dataset(trunk_name, shape = decode[0].dense_shape, data = decode[0].values, dtype = 'i')
         return
 
     # Define LSTM as a RNN.
@@ -186,6 +188,7 @@ with tf.variable_scope("LSTM") as vs:
             iter_grp = outpout_data_file.create_group("iter" + str(iter))
             lstm_grp = iter_grp.create_group("lstm_output")
             linear_grp = iter_grp.create_group("linear_output")
+            decode_grp = iter_grp.create_group("decode")
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
@@ -219,8 +222,9 @@ with tf.variable_scope("LSTM") as vs:
                 #
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
-                output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
+                decode = sess.run(decoded, feed_dict)
+                output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
                 logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
                 trunk += 1
-            # break;
+            break;
         logging.info("Testing Finished!")
