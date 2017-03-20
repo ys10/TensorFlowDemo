@@ -70,11 +70,11 @@ training_iters = 10
 keep_prob = 1.0
 
 # Network Parameters
-n_input = 69 # data input
-n_steps = 777 # time steps
+n_input = 36 # data input
+n_steps = 1496 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-n_classes = 49 # total classes
+n_classes = 47 # total classes
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [batch_size, None, n_input])
@@ -230,7 +230,7 @@ with tf.variable_scope("LSTM") as vs:
                     batch_y.append(sentence_y)
                     batch_seq_len.append(sentence_len)
                     # batch_seq_len.append(sentence_len)
-                batch_x, _ = pad_sequences(batch_x)
+                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps)
                 batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
