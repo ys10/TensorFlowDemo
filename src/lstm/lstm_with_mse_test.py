@@ -67,7 +67,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 1
 display_batch = 1
-training_iters = 10
+training_iters = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -186,6 +186,7 @@ with tf.variable_scope("LSTM") as vs:
                 break
             # trunk_name = ''
             # Traverse all trunks of a batch.
+            trunk = 0
             for trunk_name in all_trunk_names:
                 trunk_name = trunk_name.strip('\n')
                 # Define two variables to store input data.
@@ -213,7 +214,7 @@ with tf.variable_scope("LSTM") as vs:
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
                 output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
-                logging.debug("Trunk name:" + str(trunk_name)
-                              + ", time = {:.3f}".format(time.time() - start))
+                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
+                trunk += 1
                 # break;
         logging.info("Testing Finished!")
