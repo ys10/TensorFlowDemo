@@ -92,7 +92,7 @@ trunk_name = ''
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [batch_size, None, n_input])
-# y = tf.sparse_placeholder(tf.int32, [None, n_classes])
+y = tf.sparse_placeholder(tf.int32, [batch_size, None])
 seq_len = tf.placeholder(tf.int32, [None])
 
 # Define parameters of full connection between the second LSTM layer and output layer.
@@ -146,7 +146,7 @@ with tf.variable_scope("LSTM") as vs:
     pred, outputs = RNN(x, seq_len, weights, biases)
 
     # Define loss and optimizer.
-    # cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
+    cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
@@ -195,7 +195,8 @@ with tf.variable_scope("LSTM") as vs:
             trunk_name = ''
             # Every batch only contains one trunk.
             trunk = 0
-            for trunk_name in all_trunk_names:
+            for line in all_trunk_names:
+                trunk_name = line.split()[2]
                 # Define two variables to store input data.
                 batch_x = []
                 batch_y = []
@@ -204,7 +205,7 @@ with tf.variable_scope("LSTM") as vs:
                 # sentence_x is a tensor of shape (n_steps, n_inputs)
                 sentence_x = test_data_file['source/' + trunk_name.strip('\n')]
                 # sentence_y is a tensor of shape (None)
-                # sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
+                sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
                 # sentence_len is a tensor of shape (None)
                 sentence_len = test_data_file['size/' + trunk_name.strip('\n')].value
                 # Add current trunk into the batch.
@@ -224,7 +225,7 @@ with tf.variable_scope("LSTM") as vs:
                 lstm_outputs = sess.run(outputs, feed_dict)
                 decode = sess.run(decoded, feed_dict)
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
-                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
+                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {:.3f}".format(cost) + ", time = {:.3f}".format(time.time() - start))
                 trunk += 1
             # break;
         logging.info("Testing Finished!")
