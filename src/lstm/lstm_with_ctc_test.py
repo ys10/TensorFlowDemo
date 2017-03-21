@@ -196,8 +196,9 @@ with tf.variable_scope("LSTM") as vs:
             # Every batch only contains one trunk.
             trunk = 0
             for line in all_trunk_names:
-                trunk_name = line.split()[2]
+                trunk_name = line.split()[1]
                 print("trunk_name: " + trunk_name)
+                # print("length:"+ len(trunk_name))
                 # Define two variables to store input data.
                 batch_x = []
                 batch_y = []
@@ -208,25 +209,26 @@ with tf.variable_scope("LSTM") as vs:
                 # sentence_y is a tensor of shape (None)
                 sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
                 # sentence_len is a tensor of shape (None)
-                sentence_len = test_data_file['size/' + trunk_name.strip('\n')].value
+                # sentence_len = test_data_file['size/' + trunk_name.strip('\n')].value
                 # Add current trunk into the batch.
                 batch_x.append(sentence_x)
-                # batch_y.append(sentence_y)
-                batch_seq_len.append(sentence_len)
+                batch_y.append(sentence_y)
+                # batch_seq_len.append(sentence_len)
                 # Padding.
-                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps)
-                # batch_y = sparse_tuple_from(batch_y)
+                batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
+                batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
-                feed_dict = {x: batch_x, seq_len: batch_seq_len}
+                feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
                 # Calculate batch loss.
                 #
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
+                batch_cost = sess.run(cost, feed_dict)
                 decode = sess.run(decoded, feed_dict)
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
-                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {:.3f}".format(cost) + ", time = {:.3f}".format(time.time() - start))
+                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 trunk += 1
             # break;
         logging.info("Testing Finished!")
