@@ -6,9 +6,9 @@ import tensorflow as tf
 from src.lstm.utils import tensor_to_array
 
 # File storing group name.
-group_file_name = '../../tmp/data/ctc/train_speechorder_swbd_ctc.txt'
+group_file_name = '../../tmp/data/mse/train_speechorder_timit.txt'
 # HDF5 file as training data set.
-training_data_file_name = '../../tmp/data/ctc/train-swbd-ctc.hdf5'
+training_data_file_name = '../../tmp/data/mse/train-timit.hdf5'
 # Current path.
 path = os.path.abspath('.')
 print(path)
@@ -30,7 +30,7 @@ print("keys: "+ str(training_data.keys()))
 # print(X.shape)
 # print(X.dtype)
 # Label as expected classification result.
-# Y = training_data['target/sw02054-A_000790-001441']
+# Y = training_data['target/sw02054-A_000790-001441'].value
 # print(Y.shape)
 # print(Y.dtype)
 # print(Y)
@@ -100,6 +100,7 @@ lines = groups.readlines();
 # print("len(lines):")
 # print(len(lines))
 # print(ceil(len(lines)/batch_size))
+
 for line in lines:
     # Get training data by group name without line break.
     # X = training_data['source/'+line.strip('\n')]
@@ -107,6 +108,6 @@ for line in lines:
     # for i in range(0, X.shape[0], 1):
     #     print(X[i])
     for i in range(0, Y.shape[0], 1):
-        if Y[i] < 1:
+        if Y[i].any() >=48:
             print(line.strip('\n') + ":" +str(Y[i]))
-    break
+    # break

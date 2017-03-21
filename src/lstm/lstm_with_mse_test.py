@@ -14,6 +14,8 @@ from tensorflow.contrib import rnn
 import time
 import os
 from src.lstm.utils import tensor_to_array
+from src.lstm.utils import pad_sequences
+
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
 cp.read('../../conf/mse/test.ini')
@@ -76,7 +78,7 @@ truncated_step = 100
 
 # Network Parameters
 n_input = 36 # data input
-n_steps = 200 # time steps
+n_steps = 1496 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
 n_classes = 47 # total classes
@@ -85,8 +87,9 @@ n_classes = 47 # total classes
 # trunk_name = ''
 
 # tf Graph input
-x = tf.placeholder("float32", [batch_size, n_steps, n_input])
+x = tf.placeholder("float32", [batch_size, None, n_input])
 # y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
+seq_len = tf.placeholder(tf.int32, [None])
 
 with tf.variable_scope("LSTM") as vs:
     # Define parameters of full connection between the second LSTM layer and output layer.
@@ -187,7 +190,8 @@ with tf.variable_scope("LSTM") as vs:
             # trunk_name = ''
             # Traverse all trunks of a batch.
             trunk = 0
-            for trunk_name in all_trunk_names:
+            for line in all_trunk_names:
+                trunk_name = line.split()[1]
                 trunk_name = trunk_name.strip('\n')
                 # Define two variables to store input data.
                 batch_x = []
@@ -196,13 +200,14 @@ with tf.variable_scope("LSTM") as vs:
                 # trunk_x is a tensor of shape (n_steps, n_inputs)
                 trunk_x = training_data_file['source/' + trunk_name]
                 # trunk_y is a tensor of shape (n_steps - truncated_step, n_classes)
-                trunk_y = training_data_file['target/' + trunk_name]
+                # trunk_y = training_data_file['target/' + trunk_name]
                 # Add current trunk into the batch.
                 batch_x.append(trunk_x)
                 # batch_y.append(trunk_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
+                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps)
                 # feed_dict = {x: batch_x, y: batch_y}
                 feed_dict = {x: batch_x}
                 # Print accuracy by display_batch.
@@ -211,8 +216,8 @@ with tf.variable_scope("LSTM") as vs:
                 # Calculate batch loss.
                 # loss = sess.run(cost, feed_dict)
                 #
-                linear_outputs  = sess.run(pred, feed_dict)
-                lstm_outputs = sess.run(outputs, feed_dict)
+                linear_outputs, lstm_outputs  = sess.run([pred, outputs], feed_dict)
+                # lstm_outputs = sess.run(outputs, feed_dict)
                 output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
                 logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
                 trunk += 1
