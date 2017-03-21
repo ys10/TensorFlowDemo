@@ -197,6 +197,7 @@ with tf.variable_scope("LSTM") as vs:
             trunk = 0
             for line in all_trunk_names:
                 trunk_name = line.split()[2]
+                print("trunk_name: " + trunk_name)
                 # Define two variables to store input data.
                 batch_x = []
                 batch_y = []
