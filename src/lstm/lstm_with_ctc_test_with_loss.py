@@ -15,6 +15,7 @@ from math import ceil
 from tensorflow.contrib import rnn
 from src.lstm.utils import pad_sequences as pad_sequences
 from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
+from src.lstm.utils import tensor_to_array
 
 try:
     from tensorflow.python.ops import ctc_ops
@@ -24,7 +25,7 @@ except ImportError:
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
-cp.read('../../conf/ctc/lstm.ini')
+cp.read('../../conf/ctc/test.ini')
 
 # Config the logger.
 # Output into log file.
@@ -48,11 +49,21 @@ logging.getLogger('').addHandler(console)
 # Name of file storing trunk names.
 trunk_names_file_name = cp.get('data', 'trunk_names_file_name')
 # Name of HDF5 file as training data set.
-training_data_file_name = cp.get('data', 'training_data_file_name')
+test_data_file_name = cp.get('data', 'test_data_file_name')
 # Read trunk names.
 trunk_names_file = open(trunk_names_file_name, 'r')
 # Read training data set.
-training_data_file = h5py.File(training_data_file_name, 'r')
+test_data_file = h5py.File(test_data_file_name, 'r')
+# Output file name.
+outpout_data_file_name = cp.get('result', 'output_data_file_dir')+ time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())+'.hdf5'
+if not os.path.exists(outpout_data_file_name):
+    f = open(outpout_data_file_name, 'w')
+    f.close()
+# Output files.
+outpout_data_file = h5py.File(outpout_data_file_name, 'w')
+#
+lstm_grp = outpout_data_file.create_group("lstm_output")
+linear_grp = outpout_data_file.create_group("linear_output")
 
 '''
 To classify vector using a recurrent neural network,
@@ -62,7 +73,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
 learning_rate = 0.001
-batch_size = 16
+batch_size = 1
 display_batch = 1
 training_iters = 1
 # For dropout to prevent over-fitting.
@@ -70,15 +81,14 @@ training_iters = 1
 keep_prob = 1.0
 
 # Network Parameters
-# n_input = 69 # data input
-# n_steps = 777 # time steps
-# n_classes = 49 # total classes
-
 n_input = 36 # data input
 n_steps = 1496 # time steps
-n_classes = 47 # total classes
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
+n_classes = 47 # total classes
+
+#
+trunk_name = ''
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [batch_size, None, n_input])
@@ -106,53 +116,38 @@ with tf.variable_scope("LSTM") as vs:
     # Stack two same lstm cell
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
+    # Define output saving function
+    def output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, logits, outputs, decode):
+        # Sub group.
+        logits_array = tensor_to_array(logits)
+        linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
+        outputs_array = tensor_to_array(outputs)
+        lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
+        # decode_array = tf.cast(decoded[0], tf.int32)
+        decode_grp.create_dataset(trunk_name, shape = decode[0].dense_shape, data = decode[0].values, dtype = 'i')
+        return
+
     # Define LSTM as a RNN.
     def RNN(x, seq_len, weights, biases):
-
-        # Prepare data shape to match `rnn` function requirements
-        # Current data input shape: (batch_size, n_steps, n_input)
-        # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
-
-        # Permuting batch_size and n_steps
-        # x = tf.transpose(x, [1, 0, 2])
-        # Reshaping to (n_steps*batch_size, n_input)
-        # x = tf.reshape(x, [-1, n_input])
-        # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-        # x = tf.split(x, n_steps, 0)
-
-        # # Define a lstm cell with tensorflow
-        # lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
-        # # Drop out in case of over-fitting.
-        # lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
-        # # Stack two same lstm cell
-        # cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
-
-        # Initialize the states of LSTM.
-        # cell.zero_state(batch_size, dtype = tf.float32)
-        # states = tf.zeros([batch_size, n_hidden * n_layers])
-        # states = cell.zero_state(batch_size, dtype=tf.float32)
 
         # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
         outputs, states = tf.nn.dynamic_rnn(stack, x, seq_len, dtype=tf.float32)
         # Permuting batch_size and n_steps.
-        # outputs = tf.transpose(outputs, [1, 0, 2])
         outputs = tf.reshape(outputs, [-1, n_hidden])
         # Now, shape of outputs is (batch_size, n_steps, n_input)
         # Linear activation, using rnn inner loop last output
         # The first dim of outputs & weights must be same.
         logits = tf.matmul(outputs, weights['out']) + biases['out']
         logits = tf.reshape(logits, [batch_size, -1, n_classes])
-        # logits = tf.transpose(logits, (1, 0, 2))
-        #
-        # logits = tf.reshape(logits, [batch_size, None, n_classes])
-        return logits
+        logits = tf.nn.softmax(logits)
+        return logits, outputs
 
     # Define prediction of RNN(LSTM).
-    pred = RNN(x, seq_len, weights, biases)
+    pred, outputs = RNN(x, seq_len, weights, biases)
 
     # Define loss and optimizer.
     cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
     # correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
@@ -163,7 +158,7 @@ with tf.variable_scope("LSTM") as vs:
     decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
-    ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
+    # ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
 
     # Configure session
     config = tf.ConfigProto()
@@ -174,9 +169,6 @@ with tf.variable_scope("LSTM") as vs:
                         if v.name.startswith(vs.name)]
     saver = tf.train.Saver(lstm_variables)
     saved_model_path = cp.get('model', 'saved_model_path')
-    to_save_model_path = cp.get('model', 'to_save_model_path')
-
-
     # Launch the graph
     with tf.Session(config=config) as sess:
         # Initializing the variables
@@ -189,84 +181,56 @@ with tf.variable_scope("LSTM") as vs:
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
         for iter in range(0, training_iters, 1):
-            train_cost = train_ler = 0
             start = time.time()
             # For each iteration.
             logging.debug("Iter:" + str(iter))
+            # Output groups.
+            iter_grp = outpout_data_file.create_group("iter" + str(iter))
+            lstm_grp = iter_grp.create_group("lstm_output")
+            linear_grp = iter_grp.create_group("linear_output")
+            decode_grp = iter_grp.create_group("decode")
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
-            # Calculate how many batches can the data set be divided into.
-            n_batches = ceil(len(all_trunk_names)/batch_size)
-            # Train the RNN(LSTM) model by batch.
-            for batch in range(0, n_batches, 1):
-                # For each batch.
+            trunk_name = ''
+            # Every batch only contains one trunk.
+            trunk = 0
+            for line in all_trunk_names:
+                trunk_name = line.split()[1]
+                print("trunk_name: " + trunk_name)
+                # print("length:"+ len(trunk_name))
                 # Define two variables to store input data.
                 batch_x = []
                 batch_y = []
                 batch_seq_len = []
-                # Traverse all trunks of a batch.
-                for trunk in range(0, batch_size, 1):
-                    # For each trunk in the batch.
-                    # Calculate the index of current trunk in the whole data set.
-                    trunk_name_index = n_batches * batch_size + trunk
-                    # There is a fact that if the number of all trunks
-                    #   can not be divisible by batch size,
-                    #   then the last batch can not get enough trunks of batch size.
-                    # The above fact is equivalent to the fact
-                    #   that there is at least a trunk
-                    #   whose index is no less than the number of all trunks.
-                    if(trunk_name_index >= len(all_trunk_names)):
-                        # So some used trunks should be add to the last batch when the "fact" happened.
-                        # Select the last trunk to be added into the last batch.
-                        trunk_name_index = len(all_trunk_names)-1
-                    # Get trunk name from all trunk names by trunk name index.
-                    trunk_name = all_trunk_names[trunk_name_index]
-                    # Get trunk data by trunk name without line break character.
-                    # sentence_x is a tensor of shape (n_steps, n_inputs)
-                    sentence_x = training_data_file['source/' + trunk_name.strip('\n')]
-                    # sentence_y is a tensor of shape (None)
-                    # sentence_y = training_data_file['target/' + trunk_name.strip('\n')].value
-                    sentence_y = training_data_file['target/' + trunk_name.strip('\n')]
-                    # sentence_len is a tensor of shape (None)
-                    sentence_len = training_data_file['size/' + trunk_name.strip('\n')].value
-
-                    # print(sentence_y.value)
-                    # Add current trunk into the batch.
-                    batch_x.append(sentence_x)
-                    # sentence_y, _ = pad_sequences([sentence_y], maxlen=n_classes)
-                    batch_y.append(sentence_y)
-                    batch_seq_len.append(sentence_len)
-                #     break
-                # break
-                    # batch_seq_len.append(sentence_len)
-                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps)
+                # Get trunk data by trunk name without line break character.
+                # sentence_x is a tensor of shape (n_steps, n_inputs)
+                sentence_x = test_data_file['source/' + trunk_name.strip('\n')]
+                # sentence_y is a tensor of shape (None)
+                sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
+                # sentence_len is a tensor of shape (None)
+                # sentence_len = test_data_file['size/' + trunk_name.strip('\n')].value
+                # Add current trunk into the batch.
+                batch_x.append(sentence_x)
+                batch_y.append(sentence_y)
+                # batch_seq_len.append(sentence_len)
+                # Padding.
+                batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
+                if(batch_seq_len[0] > n_steps):
+                    continue
                 batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
                 feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
-                batch_cost, _ = sess.run([cost, optimizer], feed_dict)
-                train_cost += batch_cost * batch_size
-                train_ler += sess.run(ler, feed_dict) * batch_size
-                # Print accuracy by display_batch.
-                if batch % display_batch == 0:
-                    # Calculate batch accuracy.
-                    # acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
-                    # Calculate batch loss.
-                    loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
-                    logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
-                          + ", Batch Loss= {:.6f}".format(loss))
-                    # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
-                    #       + ", Batch Loss= {:.6f}".format(loss)
-                    #       + ", Training Accuracy= {:.5f}".format(acc))
-                # break;
-            # Metrics mean
-            train_cost /= (batch_size * n_batches)
-            train_ler /= (batch_size * n_batches)
-            log = "Iter {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
-            logging.info(log.format(iter+1, training_iters, train_cost, train_ler, time.time() - start))
-            # Save session by iteration.
-            saver.save(sess, to_save_model_path, global_step=iter);
-            logging.info("Model saved successfully!")
-        logging.info("Optimization Finished!")
+                # Calculate batch loss.
+                #
+                linear_outputs  = sess.run(pred, feed_dict)
+                lstm_outputs = sess.run(outputs, feed_dict)
+                batch_cost = sess.run(cost, feed_dict)
+                decode = sess.run(decoded, feed_dict)
+                output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
+                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
+                trunk += 1
+            # break;
+        logging.info("Testing Finished!")

@@ -146,7 +146,7 @@ with tf.variable_scope("LSTM") as vs:
     pred, outputs = RNN(x, seq_len, weights, biases)
 
     # Define loss and optimizer.
-    cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
+    # cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
@@ -216,6 +216,8 @@ with tf.variable_scope("LSTM") as vs:
                 # batch_seq_len.append(sentence_len)
                 # Padding.
                 batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
+                if(batch_seq_len[0] > n_steps):
+                    continue
                 batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
@@ -225,10 +227,10 @@ with tf.variable_scope("LSTM") as vs:
                 #
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
-                batch_cost = sess.run(cost, feed_dict)
+                # batch_cost = sess.run(cost, feed_dict)
                 decode = sess.run(decoded, feed_dict)
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
-                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
+                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
                 trunk += 1
             # break;
         logging.info("Testing Finished!")
