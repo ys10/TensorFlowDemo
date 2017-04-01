@@ -14,6 +14,7 @@ from math import ceil
 from tensorflow.contrib import rnn
 import time
 import os
+from src.lstm.utils import pad_sequences as pad_sequences
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
@@ -66,11 +67,11 @@ keep_prob = 1.0
 truncated_step = 100
 
 # Network Parameters
-n_input = 69 # data input
+n_input = 36 # data input
 n_steps = 200 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-n_classes = 49 # total classes
+n_classes = 47 # total classes
 
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
@@ -203,6 +204,7 @@ with tf.variable_scope("LSTM") as vs:
                     trunk_y = training_data_file['target/' + trunk_name.strip('\n')][truncated_step:][:]
                     # Add current trunk into the batch.
                     batch_x.append(trunk_x)
+                    # trunk_y, _ = pad_sequences(trunk_y, n_classes)
                     batch_y.append(trunk_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)

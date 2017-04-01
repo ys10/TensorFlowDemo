@@ -14,6 +14,8 @@ from tensorflow.contrib import rnn
 import time
 import os
 from src.lstm.utils import tensor_to_array
+from src.lstm.utils import pad_sequences
+
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
 cp.read('../../conf/mse/test.ini')
@@ -67,7 +69,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 1
 display_batch = 1
-training_iters = 10
+training_iters = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -75,18 +77,19 @@ keep_prob = 1.0
 truncated_step = 100
 
 # Network Parameters
-n_input = 69 # data input
-n_steps = 200 # time steps
+n_input = 36 # data input
+n_steps = 1496 # time steps
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-n_classes = 49 # total classes
+n_classes = 47 # total classes
 
 #
 # trunk_name = ''
 
 # tf Graph input
-x = tf.placeholder("float32", [batch_size, n_steps, n_input])
-y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
+x = tf.placeholder("float32", [batch_size, None, n_input])
+# y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
+seq_len = tf.placeholder(tf.int32, [None])
 
 with tf.variable_scope("LSTM") as vs:
     # Define parameters of full connection between the second LSTM layer and output layer.
@@ -140,13 +143,13 @@ with tf.variable_scope("LSTM") as vs:
     pred, outputs = RNN(x, weights, biases)
 
     # Define loss and optimizer.
-    loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
-    cost = tf.reduce_mean(loss)
+    # loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
+    # cost = tf.reduce_mean(loss)
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
-    correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
-    accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+    # correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
+    # accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
     # Configure session
     config = tf.ConfigProto()
@@ -186,35 +189,37 @@ with tf.variable_scope("LSTM") as vs:
                 break
             # trunk_name = ''
             # Traverse all trunks of a batch.
-            for trunk_name in all_trunk_names:
+            trunk = 0
+            for line in all_trunk_names:
+                trunk_name = line.split()[1]
                 trunk_name = trunk_name.strip('\n')
                 # Define two variables to store input data.
                 batch_x = []
-                batch_y = []
+                # batch_y = []
                 # Get trunk data by trunk name without line break character.
                 # trunk_x is a tensor of shape (n_steps, n_inputs)
                 trunk_x = training_data_file['source/' + trunk_name]
                 # trunk_y is a tensor of shape (n_steps - truncated_step, n_classes)
-                trunk_y = training_data_file['target/' + trunk_name]
+                # trunk_y = training_data_file['target/' + trunk_name]
                 # Add current trunk into the batch.
                 batch_x.append(trunk_x)
-                batch_y.append(trunk_y)
+                # batch_y.append(trunk_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
-                feed_dict = {x: batch_x, y: batch_y}
+                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps)
+                # feed_dict = {x: batch_x, y: batch_y}
+                feed_dict = {x: batch_x}
                 # Print accuracy by display_batch.
                 # Calculate batch accuracy.
-                acc = sess.run(accuracy, feed_dict)
+                # acc = sess.run(accuracy, feed_dict)
                 # Calculate batch loss.
-                loss = sess.run(cost, feed_dict)
+                # loss = sess.run(cost, feed_dict)
                 #
-                linear_outputs  = sess.run(pred, feed_dict)
-                lstm_outputs = sess.run(outputs, feed_dict)
+                linear_outputs, lstm_outputs  = sess.run([pred, outputs], feed_dict)
+                # lstm_outputs = sess.run(outputs, feed_dict)
                 output_data_saving(lstm_grp, linear_grp, trunk_name, linear_outputs, lstm_outputs)
-                logging.debug("Trunk name:" + str(trunk_name)
-                              + ", Batch Loss= {:.6f}".format(loss)
-                              + ", Training Accuracy= {:.5f}".format(acc)
-                              + ", time = {:.3f}".format(time.time() - start))
+                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
+                trunk += 1
                 # break;
         logging.info("Testing Finished!")

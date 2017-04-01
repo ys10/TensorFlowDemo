@@ -117,14 +117,14 @@ with tf.variable_scope("LSTM") as vs:
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
     # Define output saving function
-    def output_data_saving(trunk_name, lstm_grp, linear_grp, logits, outputs):
+    def output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, logits, outputs, decode):
         # Sub group.
         logits_array = tensor_to_array(logits)
         linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
         outputs_array = tensor_to_array(outputs)
         lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
         # decode_array = tf.cast(decoded[0], tf.int32)
-        # decode_grp.create_dataset(trunk_name, shape = decode[0].dense_shape, data = decode[0].values, dtype = 'i')
+        decode_grp.create_dataset(trunk_name, shape = decode[0].dense_shape, data = decode[0].values, dtype = 'i')
         return
 
     # Define LSTM as a RNN.
@@ -146,7 +146,7 @@ with tf.variable_scope("LSTM") as vs:
     pred, outputs = RNN(x, seq_len, weights, biases)
 
     # Define loss and optimizer.
-    # cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
+    cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
@@ -155,7 +155,7 @@ with tf.variable_scope("LSTM") as vs:
 
     # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
     # (it's slower but you'll get better results)
-    # decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
     # ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
@@ -188,7 +188,7 @@ with tf.variable_scope("LSTM") as vs:
             iter_grp = outpout_data_file.create_group("iter" + str(iter))
             lstm_grp = iter_grp.create_group("lstm_output")
             linear_grp = iter_grp.create_group("linear_output")
-            # decode_grp = iter_grp.create_group("decode")
+            decode_grp = iter_grp.create_group("decode")
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
@@ -227,10 +227,12 @@ with tf.variable_scope("LSTM") as vs:
                 #
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
-                # batch_cost = sess.run(cost, feed_dict)
-                # decode = sess.run(decoded, feed_dict)
-                output_data_saving(trunk_name, lstm_grp, linear_grp, linear_outputs, lstm_outputs)
-                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
+                batch_cost = sess.run(cost, feed_dict)
+                decode = sess.run(decoded, feed_dict)
+                output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
+                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 trunk += 1
+                if trunk >=5:
+                    break;
             # break;
         logging.info("Testing Finished!")

@@ -64,21 +64,25 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 16
 display_batch = 1
-training_iters = 10
+training_iters = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
 
 # Network Parameters
-n_input = 69 # data input
-n_steps = 777 # time steps
+# n_input = 69 # data input
+# n_steps = 777 # time steps
+# n_classes = 49 # total classes
+
+n_input = 36 # data input
+n_steps = 1496 # time steps
+n_classes = 47 # total classes
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-n_classes = 49 # total classes
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [batch_size, None, n_input])
-y = tf.sparse_placeholder(tf.int32, [None, n_classes])
+y = tf.sparse_placeholder(tf.int32, [batch_size, None])
 seq_len = tf.placeholder(tf.int32, [None])
 
 # Define parameters of full connection between the second LSTM layer and output layer.
@@ -222,15 +226,21 @@ with tf.variable_scope("LSTM") as vs:
                     # sentence_x is a tensor of shape (n_steps, n_inputs)
                     sentence_x = training_data_file['source/' + trunk_name.strip('\n')]
                     # sentence_y is a tensor of shape (None)
+                    # sentence_y = training_data_file['target/' + trunk_name.strip('\n')].value
                     sentence_y = training_data_file['target/' + trunk_name.strip('\n')]
                     # sentence_len is a tensor of shape (None)
                     sentence_len = training_data_file['size/' + trunk_name.strip('\n')].value
+
+                    # print(sentence_y.value)
                     # Add current trunk into the batch.
                     batch_x.append(sentence_x)
+                    # sentence_y, _ = pad_sequences([sentence_y], maxlen=n_classes)
                     batch_y.append(sentence_y)
                     batch_seq_len.append(sentence_len)
+                #     break
+                # break
                     # batch_seq_len.append(sentence_len)
-                batch_x, _ = pad_sequences(batch_x)
+                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps)
                 batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
