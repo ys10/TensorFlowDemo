@@ -2,7 +2,7 @@ import configparser
 import logging
 import time, os
 import h5py
-import tensorflow as tf
+# import tensorflow as tf
 from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
 
 # Import configuration by config parser.
