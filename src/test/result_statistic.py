@@ -40,7 +40,7 @@ test_data_file = h5py.File(data_file_name, 'r')
 
 n_classes = 47 # total classes
 
-y = tf.sparse_placeholder(tf.int32, [None])
+# y = tf.sparse_placeholder(tf.int32, [None])
 
 result = [[0] * n_classes];
 
@@ -74,8 +74,8 @@ for line in all_trunk_names:
     # batch_y.append(sentence_y)
     # batch_y = sparse_tuple_from(batch_y)
     logging.debug(decode.value[0])
-    break;
-    for phome in decode:
+    # break;
+    for phome in decode.value[0]:
         logging.debug("phome:" + phome)
         result[int(phome)] += 1
     logging.debug(
