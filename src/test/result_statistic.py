@@ -3,7 +3,7 @@ import logging
 import time, os
 import h5py
 # import tensorflow as tf
-from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
+# from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
@@ -61,8 +61,8 @@ trunk_name = ''
 # Every batch only contains one trunk.
 trunk = 0
 for line in all_trunk_names:
-    # trunk_name = line.split()[1]
-    trunk_name = line.split()[0]
+    trunk_name = line.split()[1]
+    # trunk_name = line.split()[0]
     print("trunk_name: " + trunk_name)
     # print("length:"+ len(trunk_name))
     # Define two variables to store input data.
@@ -73,7 +73,7 @@ for line in all_trunk_names:
     # Add current trunk into the batch.
     # batch_y.append(sentence_y)
     # batch_y = sparse_tuple_from(batch_y)
-    logging.debug(decode)
+    logging.debug(decode.value[0])
     break;
     for phome in decode:
         logging.debug("phome:" + phome)
