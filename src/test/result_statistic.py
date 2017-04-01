@@ -66,16 +66,16 @@ for line in all_trunk_names:
     print("trunk_name: " + trunk_name)
     # print("length:"+ len(trunk_name))
     # Define two variables to store input data.
-    decode = []
+    # decode = []
     # Get trunk data by trunk name without line break character.
     # sentence_y is a tensor of shape (None)
-    sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
+    decode = test_data_file['iter0/decode/' + trunk_name.strip('\n')]
     # Add current trunk into the batch.
     # batch_y.append(sentence_y)
     # batch_y = sparse_tuple_from(batch_y)
     logging.debug(decode)
     break;
-    for phome in batch_y[0]:
+    for phome in decode:
         logging.debug("phome:" + phome)
         result[int(phome)] += 1
     logging.debug(
