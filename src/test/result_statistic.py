@@ -42,7 +42,9 @@ n_classes = 47 # total classes
 
 # y = tf.sparse_placeholder(tf.int32, [None])
 
-result = [[0] * n_classes];
+result = [];
+for i in range(n_classes):
+   result.append(0);
 
 def one_hot_to_index (one_hot):
     for i in range(0, len(one_hot), 1):
@@ -69,17 +71,22 @@ for line in all_trunk_names:
     # decode = []
     # Get trunk data by trunk name without line break character.
     # sentence_y is a tensor of shape (None)
-    decode = test_data_file['iter0/decode/' + trunk_name.strip('\n')]
+    decode = None
+    try:
+        decode = test_data_file['iter0/decode/' + trunk_name.strip('\n')]
+    except KeyError:
+        continue
     # Add current trunk into the batch.
     # batch_y.append(sentence_y)
     # batch_y = sparse_tuple_from(batch_y)
-    logging.debug(decode.value[0])
+    # logging.debug(decode.value[0])
     # break;
     for phome in decode.value[0]:
-        logging.debug("phome:" + phome)
+        # logging.debug("phome:" + str(int(phome)))
         result[int(phome)] += 1
     logging.debug(
         "Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", time = {:.3f}".format(time.time() - start))
     logging.debug(result)
     trunk += 1
-    break;
+    # break;
+logging.debug("trunk:"+str(trunk))
