@@ -6,27 +6,24 @@ import tensorflow as tf
 from src.lstm.utils import tensor_to_array
 
 # File storing group name.
-group_file_name = '../../tmp/data/mse/train_speechorder_timit.txt'
-# HDF5 file as training data set.
-training_data_file_name = '../../tmp/data/mse/train-timit.hdf5'
-# Current path.
-path = os.path.abspath('.')
-print(path)
-# # Read group data.
+group_file_name = '../../tmp/data/ctc/keyspeechlist'
+# Read group data.
 groups = open(group_file_name, 'r');
-# # Read training data file.
+# HDF5 file as training data set.
+training_data_file_name = '../../tmp/result/mse/2017-03-22-01-18-50.hdf5'
+# Read training data file.
 training_data = h5py.File(training_data_file_name, 'r')
-#
-# output = training_data['iter0/lstm_output/fbcg1_si982_5']
-# print(output.shape)
-# print(output.dtype)
-# print(output.value)
-#
-#
+
+output = training_data['iter0/linear_output/sw02054-A_056104-056668']
+output = tf.reshape(output.value, [output.shape[1], output.shape[2]])
+print(output.shape)
+print(output.dtype)
+
+
 # Get a group.
-print("keys: "+ str(training_data.keys()))
-# Tensors as input data.
-# X = training_data['source/faem0_si1392']
+# print("keys: "+ str(training_data.keys()))
+# # Tensors as input data.
+# X = training_data['iter0/lstm_output/sw02466-B_026026-026936']
 # print(X.shape)
 # print(X.dtype)
 # Label as expected classification result.
@@ -94,20 +91,20 @@ print("keys: "+ str(training_data.keys()))
 # ##############
 
 
-batch_size = 32;
-# Traverse all groups
-lines = groups.readlines();
-# print("len(lines):")
-# print(len(lines))
-# print(ceil(len(lines)/batch_size))
-
-for line in lines:
-    # Get training data by group name without line break.
-    # X = training_data['source/'+line.strip('\n')]
-    Y = training_data['target/'+line.strip('\n')]
-    # for i in range(0, X.shape[0], 1):
-    #     print(X[i])
-    for i in range(0, Y.shape[0], 1):
-        if Y[i].any() >=48:
-            print(line.strip('\n') + ":" +str(Y[i]))
-    # break
+# batch_size = 32;
+# # Traverse all groups
+# lines = groups.readlines();
+# # print("len(lines):")
+# # print(len(lines))
+# # print(ceil(len(lines)/batch_size))
+#
+# for line in lines:
+#     # Get training data by group name without line break.
+#     # X = training_data['source/'+line.strip('\n')]
+#     Y = training_data['target/'+line.strip('\n')]
+#     # for i in range(0, X.shape[0], 1):
+#     #     print(X[i])
+#     for i in range(0, Y.shape[0], 1):
+#         if Y[i].any() >=48:
+#             print(line.strip('\n') + ":" +str(Y[i]))
+#     # break
