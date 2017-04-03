@@ -250,6 +250,7 @@ with tf.variable_scope("LSTM") as vs:
                 train_cost += batch_cost * batch_size
                 batch_ler = sess.run(ler, feed_dict)
                 train_ler += batch_ler * batch_size
+                batch_decode = sess.run(decoded, feed_dict)
                 # Print accuracy by display_batch.
                 if batch % display_batch == 0:
                     # Calculate batch accuracy.
@@ -257,7 +258,8 @@ with tf.variable_scope("LSTM") as vs:
                     # Calculate batch loss.
                     loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                     logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
-                          + ", Batch Loss= {:.6f}".format(loss) + ", Batch ler= "+ str(batch_ler))
+                          + ", Batch Loss= {:.6f}".format(loss) + ", Batch ler= {:.6f}".format(batch_ler))
+                    logging.debug("Decode:" + str(batch_decode))
                     # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                     #       + ", Batch Loss= {:.6f}".format(loss)
                     #       + ", Training Accuracy= {:.5f}".format(acc))
