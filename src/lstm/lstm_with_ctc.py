@@ -61,10 +61,10 @@ Because trunk shape is 200*69,
 we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
-learning_rate = 0.001
+learning_rate = 0.000001
 batch_size = 16
 display_batch = 1
-training_iters = 1
+training_iters = 5
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -248,7 +248,8 @@ with tf.variable_scope("LSTM") as vs:
                 feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
                 batch_cost, _ = sess.run([cost, optimizer], feed_dict)
                 train_cost += batch_cost * batch_size
-                train_ler += sess.run(ler, feed_dict) * batch_size
+                batch_ler = sess.run(ler, feed_dict)
+                train_ler += batch_ler * batch_size
                 # Print accuracy by display_batch.
                 if batch % display_batch == 0:
                     # Calculate batch accuracy.
@@ -256,7 +257,7 @@ with tf.variable_scope("LSTM") as vs:
                     # Calculate batch loss.
                     loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                     logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
-                          + ", Batch Loss= {:.6f}".format(loss))
+                          + ", Batch Loss= {:.6f}".format(loss) + ", Batch ler= "+ batch_ler)
                     # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                     #       + ", Batch Loss= {:.6f}".format(loss)
                     #       + ", Training Accuracy= {:.5f}".format(acc))
