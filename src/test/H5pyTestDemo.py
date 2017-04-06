@@ -6,18 +6,18 @@ import tensorflow as tf
 from src.lstm.utils import tensor_to_array
 
 # File storing group name.
-group_file_name = '../../tmp/data/ctc/keyspeechlist'
+group_file_name = '../../tmp/data/train_speechorder_timit.txt'
 # Read group data.
 groups = open(group_file_name, 'r');
 # HDF5 file as training data set.
-training_data_file_name = '../../tmp/result/mse/2017-03-22-01-18-50.hdf5'
+training_data_file_name = '../../tmp/data/train-timit.hdf5'
 # Read training data file.
 training_data = h5py.File(training_data_file_name, 'r')
 
-output = training_data['iter0/linear_output/sw02054-A_056104-056668']
-output = tf.reshape(output.value, [output.shape[1], output.shape[2]])
-print(output.shape)
-print(output.dtype)
+# output = training_data['fbcg1_si982_5target/fbcg1_si982_5']
+# output = tf.reshape(output.value, [output.shape[1], output.shape[2]])
+# print(output.shape)
+# print(output.dtype)
 
 
 # Get a group.
@@ -27,10 +27,10 @@ print(output.dtype)
 # print(X.shape)
 # print(X.dtype)
 # Label as expected classification result.
-# Y = training_data['target/sw02054-A_000790-001441'].value
-# print(Y.shape)
-# print(Y.dtype)
-# print(Y)
+Y = training_data['target/fbcg1_si982_5'].value
+print(Y.shape)
+print(Y.dtype)
+print(Y)
 
 # for i in range(0, X.shape[0], 1):
 #     print(X[i])
