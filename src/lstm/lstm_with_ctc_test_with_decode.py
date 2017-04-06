@@ -196,7 +196,7 @@ with tf.variable_scope("LSTM") as vs:
             # Every batch only contains one trunk.
             trunk = 0
             for line in all_trunk_names:
-                trunk_name = line.split()[1]
+                trunk_name = line.split()[0]
                 print("trunk_name: " + trunk_name)
                 # print("length:"+ len(trunk_name))
                 # Define two variables to store input data.
@@ -232,7 +232,7 @@ with tf.variable_scope("LSTM") as vs:
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
                 logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 logging.debug("label:" + str(sentence_y.value))
-                logging.debug("decode:" + str(decode.value))
+                logging.debug("decode:" + str(decode.values))
                 logging.debug("ler:"+str(ler))
                 trunk += 1
                 if trunk >=2:
