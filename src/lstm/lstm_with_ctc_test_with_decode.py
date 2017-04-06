@@ -236,7 +236,7 @@ with tf.variable_scope("LSTM") as vs:
                 logging.debug("decode:" + str(decode[0].values))
                 logging.debug("ler:{:.8f}".format(batch_ler))
                 trunk += 1
-                if trunk >=2:
-                    break;
+                # if trunk >=2:
+                #     break;
             # break;
         logging.info("Testing Finished!")
