@@ -11,7 +11,7 @@ import configparser
 import logging
 import tensorflow as tf
 import h5py
-from math import ceil
+import math
 from tensorflow.contrib import rnn
 from src.lstm.utils import pad_sequences as pad_sequences
 from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
@@ -196,8 +196,11 @@ with tf.variable_scope("LSTM") as vs:
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
+            logging.debug("number of trunks:"+str(len(all_trunk_names)))
             # Calculate how many batches can the data set be divided into.
-            n_batches = ceil(len(all_trunk_names)/batch_size)
+            n_batches = math.floor(len(all_trunk_names)/batch_size)
+            # n_batches = math.ceil(len(all_trunk_names) / batch_size)
+            logging.debug("n_batches:" + str(n_batches))
             # Train the RNN(LSTM) model by batch.
             for batch in range(0, n_batches, 1):
                 # For each batch.
@@ -209,7 +212,7 @@ with tf.variable_scope("LSTM") as vs:
                 for trunk in range(0, batch_size, 1):
                     # For each trunk in the batch.
                     # Calculate the index of current trunk in the whole data set.
-                    trunk_name_index = n_batches * batch_size + trunk
+                    trunk_name_index = batch * batch_size + trunk
                     logging.debug(trunk_name_index)
                     # There is a fact that if the number of all trunks
                     #   can not be divisible by batch size,
