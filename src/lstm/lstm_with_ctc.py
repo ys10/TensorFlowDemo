@@ -213,7 +213,7 @@ with tf.variable_scope("LSTM") as vs:
                     # For each trunk in the batch.
                     # Calculate the index of current trunk in the whole data set.
                     trunk_name_index = batch * batch_size + trunk
-                    logging.debug("trunk_name_index" + str(trunk_name_index))
+                    logging.debug("trunk_name_index: " + str(trunk_name_index))
                     # There is a fact that if the number of all trunks
                     #   can not be divisible by batch size,
                     #   then the last batch can not get enough trunks of batch size.
@@ -227,7 +227,7 @@ with tf.variable_scope("LSTM") as vs:
                         logging.info("trunk_name_index >= len(all_trunk_names), trunk_name_index is:"+ str(trunk_name_index)+"len(all_trunk_names):"+str(len(all_trunk_names)))
                     # Get trunk name from all trunk names by trunk name index.
                     trunk_name = all_trunk_names[trunk_name_index]
-                    logging.debug("trunk_name:" + trunk_name)
+                    logging.debug("trunk_name: " + trunk_name)
                     break;
                     # Get trunk data by trunk name without line break character.
                     # sentence_x is a tensor of shape (n_steps, n_inputs)
