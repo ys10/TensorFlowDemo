@@ -229,11 +229,12 @@ with tf.variable_scope("LSTM") as vs:
                 lstm_outputs = sess.run(outputs, feed_dict)
                 batch_cost = sess.run(cost, feed_dict)
                 decode = sess.run(decoded, feed_dict)
+                batch_ler = sess.run(ler, feed_dict)
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
                 logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 logging.debug("label:" + str(sentence_y.value))
-                logging.debug("decode:" + str(decode.values))
-                logging.debug("ler:"+str(ler))
+                logging.debug("decode:" + str(decode[0].values))
+                logging.debug("ler:{:.8f}".format(batch_ler))
                 trunk += 1
                 if trunk >=2:
                     break;
