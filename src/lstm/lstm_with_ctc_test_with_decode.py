@@ -158,7 +158,7 @@ with tf.variable_scope("LSTM") as vs:
     decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
-    # ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
+    ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
 
     # Configure session
     config = tf.ConfigProto()
@@ -233,6 +233,7 @@ with tf.variable_scope("LSTM") as vs:
                 logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 logging.debug("label:" + str(sentence_y))
                 logging.debug("decode:" + str(decode))
+                logging.debug("ler:"+str(ler))
                 trunk += 1
                 if trunk >=2:
                     break;
