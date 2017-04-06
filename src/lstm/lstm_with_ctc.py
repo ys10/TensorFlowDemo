@@ -210,6 +210,7 @@ with tf.variable_scope("LSTM") as vs:
                     # For each trunk in the batch.
                     # Calculate the index of current trunk in the whole data set.
                     trunk_name_index = n_batches * batch_size + trunk
+                    logging.debug(trunk_name_index)
                     # There is a fact that if the number of all trunks
                     #   can not be divisible by batch size,
                     #   then the last batch can not get enough trunks of batch size.
@@ -222,6 +223,7 @@ with tf.variable_scope("LSTM") as vs:
                         trunk_name_index = len(all_trunk_names)-1
                     # Get trunk name from all trunk names by trunk name index.
                     trunk_name = all_trunk_names[trunk_name_index]
+                    logging.debug(trunk_name)
                     # Get trunk data by trunk name without line break character.
                     # sentence_x is a tensor of shape (n_steps, n_inputs)
                     sentence_x = training_data_file['source/' + trunk_name.strip('\n')]
@@ -256,6 +258,7 @@ with tf.variable_scope("LSTM") as vs:
                     # Calculate batch accuracy.
                     # acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                     # Calculate batch loss.
+                    # logging.debug(str(batch_x))
                     loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                     logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                           + ", Batch Loss= {:.6f}".format(loss) + ", Batch ler= {:.6f}".format(batch_ler))
