@@ -262,7 +262,7 @@ with tf.variable_scope("LSTM") as vs:
                     # Calculate batch accuracy.
                     # acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                     # Calculate batch loss.
-                    logging.debug(str(batch_x))
+                    logging.debug("batch_y: "+str(batch_y))
                     loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
                     logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                           + ", Batch Loss= {:.6f}".format(loss) + ", Batch ler= {:.6f}".format(batch_ler))
