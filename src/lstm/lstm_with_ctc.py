@@ -61,7 +61,7 @@ Because trunk shape is 200*69,
 we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
-learning_rate = 0.000001
+learning_rate = 0.0001
 batch_size = 16
 display_batch = 1
 training_iters = 5
@@ -228,7 +228,6 @@ with tf.variable_scope("LSTM") as vs:
                     # Get trunk name from all trunk names by trunk name index.
                     trunk_name = all_trunk_names[trunk_name_index]
                     logging.debug("trunk_name: " + trunk_name)
-                    break;
                     # Get trunk data by trunk name without line break character.
                     # sentence_x is a tensor of shape (n_steps, n_inputs)
                     sentence_x = training_data_file['source/' + trunk_name.strip('\n')]
