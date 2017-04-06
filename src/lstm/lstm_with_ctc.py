@@ -240,7 +240,7 @@ with tf.variable_scope("LSTM") as vs:
                 #     break
                 # break
                     # batch_seq_len.append(sentence_len)
-                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps)
+                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps, padding='pre')
                 batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
