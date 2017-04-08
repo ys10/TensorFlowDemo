@@ -236,7 +236,7 @@ with tf.variable_scope("LSTM") as vs:
                 batch_ler = sess.run(ler, feed_dict)
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
                 logging.debug("Trunk: " + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
-                logging.debug("label: " + str(sparse_tuple_from(sentence_y)))
+                logging.debug("label: " + str(batch_y))
                 logging.debug("linear_outputs: " + str(linear_outputs))
                 logging.debug("lstm_outputs: " + str(lstm_outputs))
                 logging.debug("Decode: " + str(decode))
