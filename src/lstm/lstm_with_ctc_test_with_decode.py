@@ -81,11 +81,15 @@ training_iters = 1
 keep_prob = 1.0
 
 # Network Parameters
-n_input = 36 # data input
-n_steps = 1496 # time steps
+n_input = 69 # data input
+n_steps = 777 # time steps
+n_classes = 49 # total classes
+
+# n_input = 36 # data input
+# n_steps = 1496 # time steps
+# n_classes = 47 # total classes
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-n_classes = 47 # total classes
 
 #
 trunk_name = ''
@@ -197,7 +201,7 @@ with tf.variable_scope("LSTM") as vs:
             trunk = 0
             for line in all_trunk_names:
                 trunk_name = line.split()[0]
-                print("trunk_name: " + trunk_name)
+                # print("trunk_name: " + trunk_name)
                 # print("length:"+ len(trunk_name))
                 # Define two variables to store input data.
                 batch_x = []
@@ -209,7 +213,7 @@ with tf.variable_scope("LSTM") as vs:
                 # sentence_y is a tensor of shape (None)
                 sentence_y = test_data_file['target/' + trunk_name.strip('\n')]
                 # sentence_len is a tensor of shape (None)
-                # sentence_len = test_data_file['size/' + trunk_name.strip('\n')].value
+                sentence_len = test_data_file['size/' + trunk_name.strip('\n')].value
                 # Add current trunk into the batch.
                 batch_x.append(sentence_x)
                 batch_y.append(sentence_y)
@@ -231,12 +235,14 @@ with tf.variable_scope("LSTM") as vs:
                 decode = sess.run(decoded, feed_dict)
                 batch_ler = sess.run(ler, feed_dict)
                 output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
-                logging.debug("Trunk:" + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
-                logging.debug("label:" + str(sentence_y.value))
-                logging.debug("decode:" + str(decode[0].values))
+                logging.debug("Trunk: " + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
+                logging.debug("label: " + str(sentence_y))
+                logging.debug("linear_outputs: " + str(linear_outputs))
+                logging.debug("lstm_outputs: " + str(lstm_outputs))
+                logging.debug("Decode: " + str(decode))
                 logging.debug("ler:{:.8f}".format(batch_ler))
                 trunk += 1
-                # if trunk >=2:
-                #     break;
+                if trunk >=2:
+                    break;
             # break;
         logging.info("Testing Finished!")
