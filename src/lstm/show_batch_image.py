@@ -109,9 +109,9 @@ for iter in range(0, training_iters, 1):
             lstm_outputs = result_data['iter0/lstm_output/' + trunk_name.strip('\n')]
             decode = result_data['iter0/decode/' + trunk_name.strip('\n')]
             #
-            batch_lstm_outputs.append(lstm_outputs)
-            batch_linear_outputs.append(linear_outputs)
-            batch_decode.append(decode)
+            batch_lstm_outputs.append(lstm_outputs.value)
+            batch_linear_outputs.append(linear_outputs.value)
+            batch_decode.append(decode.value)
         #
         batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
         batch_y = sparse_tuple_from(batch_y)
