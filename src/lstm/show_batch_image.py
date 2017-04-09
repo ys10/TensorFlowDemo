@@ -37,10 +37,12 @@ groups = open(group_file_name, 'r');
 test_data_file_name = cp.get('data', 'test_data_file_name')
 # Read training data file.
 test_data = h5py.File(test_data_file_name, 'r')
-# # Name of HDF5 file as result data set.
+# Name of HDF5 file as result data set.
 result_data_file_name = cp.get('data', 'result_data_file_name')
 # Read result data file.
 result_data = h5py.File(result_data_file_name, 'r')
+# Image result directory.
+image_dir = cp.get('img', 'image_dir')
 
 # Parameters
 batch_size = 1
@@ -118,9 +120,9 @@ for iter in range(0, training_iters, 1):
         img_linear_outputs = Image.fromarray(np.uint8(np.array(batch_linear_outputs.value)))
         img_lstm_outputs = Image.fromarray(np.uint8(np.array(batch_lstm_outputs.value)))
         # show the result by picture.
-        img_label.save("img_label" + trunk_name + ".png")
-        img_linear_outputs.save("img_linear_outputs" + trunk_name + ".png")
-        img_lstm_outputs.save("img_lstm_outputs" + trunk_name + ".png")
+        img_label.save(image_dir + "img_label" + trunk_name + ".png")
+        img_linear_outputs.save(image_dir + "img_linear_outputs" + trunk_name + ".png")
+        img_lstm_outputs.save(image_dir + "img_lstm_outputs" + trunk_name + ".png")
         # TODO
         logging.debug("Trunk: " + str(trunk) + " name:" + str(trunk_name))
         logging.debug("label: " + str(batch_y))
