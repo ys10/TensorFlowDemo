@@ -122,9 +122,9 @@ for iter in range(0, training_iters, 1):
         logging.debug("lstm_outputs: " + str(batch_lstm_outputs))
         logging.debug("Decode: " + str(batch_decode))
         # transfer the result to picture.
-        img_label = Image.fromarray(np.uint8(batch_y[0]))
-        img_linear_outputs = Image.fromarray(np.uint8(np.array(batch_linear_outputs)))
-        img_lstm_outputs = Image.fromarray(np.uint8(np.array(batch_lstm_outputs)))
+        img_label = Image.fromarray(np.uint32(batch_y[0]))
+        img_linear_outputs = Image.fromarray(np.uint32(np.array(batch_linear_outputs)))
+        img_lstm_outputs = Image.fromarray(np.uint32(np.array(batch_lstm_outputs)))
         # show the result by picture.
         img_label.save(image_dir + "img_label" + trunk_name + ".png")
         img_linear_outputs.save(image_dir + "img_linear_outputs" + trunk_name + ".png")
