@@ -112,23 +112,27 @@ for iter in range(0, training_iters, 1):
             batch_lstm_outputs.append(lstm_outputs.value)
             batch_linear_outputs.append(linear_outputs.value)
             batch_decode.append(decode.value)
-        #
+        # Process label & input.
         batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
         batch_y = sparse_tuple_from(batch_y)
-        #
+        # Process output.
+
+        # TODO
+        # Print the data info.
         logging.debug("Batch: " + str(batch))
         logging.debug("label: " + str(batch_y))
         logging.debug("linear_outputs: " + str(batch_linear_outputs))
         logging.debug("lstm_outputs: " + str(batch_lstm_outputs))
         logging.debug("Decode: " + str(batch_decode))
         # transfer the result to picture.
-        img_label = Image.fromarray(np.uint32(batch_y[0]))
-        img_linear_outputs = Image.fromarray(np.uint32(np.array(batch_linear_outputs)))
-        img_lstm_outputs = Image.fromarray(np.uint32(np.array(batch_lstm_outputs)))
-        # show the result by picture.
+        img_label = Image.fromarray(np.uint8(batch_y[0]))
         img_label.save(image_dir + "img_label" + trunk_name + ".png")
+        img_linear_outputs = Image.fromarray(np.uint8(np.array(batch_linear_outputs)))
+        img_lstm_outputs = Image.fromarray(np.uint8(np.array(batch_lstm_outputs)))
+        # show the result by picture.
+
         img_linear_outputs.save(image_dir + "img_linear_outputs" + trunk_name + ".png")
         img_lstm_outputs.save(image_dir + "img_lstm_outputs" + trunk_name + ".png")
-        # TODO
+        # Print the batch time.
         logging.debug("time: {:.3f}".format(time.time() - start))
         break;
