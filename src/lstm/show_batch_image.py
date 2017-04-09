@@ -1,5 +1,6 @@
 import time, os, math
 from PIL import Image
+import numpy as np
 import h5py
 import configparser
 import logging
@@ -113,9 +114,9 @@ for iter in range(0, training_iters, 1):
         batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
         batch_y = sparse_tuple_from(batch_y)
         # transfer the result to picture.
-        img_label = batch_y.value
-        img_linear_outputs = batch_linear_outputs.value
-        img_lstm_outputs = batch_lstm_outputs.value
+        img_label = Image.fromarray(np.uint8(np.array(batch_y.value)))
+        img_linear_outputs = Image.fromarray(np.uint8(np.array(batch_linear_outputs.value)))
+        img_lstm_outputs = Image.fromarray(np.uint8(np.array(batch_lstm_outputs.value)))
         # show the result by picture.
         img_label.save("img_label" + trunk_name + ".png")
         img_linear_outputs.save("img_linear_outputs" + trunk_name + ".png")
