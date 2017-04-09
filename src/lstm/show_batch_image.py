@@ -4,6 +4,7 @@ import numpy as np
 import h5py
 import configparser
 import logging
+import tensorflow as tf
 from src.lstm.utils import pad_sequences
 from src.lstm.utils import sparse_tuple_from
 
@@ -105,13 +106,13 @@ for iter in range(0, training_iters, 1):
             batch_x.append(sentence_x)
             batch_y.append(sentence_y)
             #
-            linear_outputs = result_data['iter0/linear_output/' + trunk_name.strip('\n')]
-            lstm_outputs = result_data['iter0/lstm_output/' + trunk_name.strip('\n')]
-            decode = result_data['iter0/decode/' + trunk_name.strip('\n')]
+            linear_outputs = tf.concat(0, result_data['iter0/linear_output/' + trunk_name.strip('\n')].value)
+            lstm_outputs = tf.concat(0, result_data['iter0/lstm_output/' + trunk_name.strip('\n')].value)
+            decode = tf.concat(0, result_data['iter0/decode/' + trunk_name.strip('\n')].value)
             #
-            batch_lstm_outputs.append(lstm_outputs.value)
-            batch_linear_outputs.append(linear_outputs.value)
-            batch_decode.append(decode.value)
+            batch_lstm_outputs.append(lstm_outputs)
+            batch_linear_outputs.append(linear_outputs)
+            batch_decode.append(decode)
         # Process label & input.
         batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
         batch_y = sparse_tuple_from(batch_y)
