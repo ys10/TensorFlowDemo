@@ -116,11 +116,11 @@ for iter in range(0, training_iters, 1):
         batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
         batch_y = sparse_tuple_from(batch_y)
         #
-        logging.debug("Trunk: " + str(trunk) + " name:" + str(trunk_name))
+        logging.debug("Batch: " + str(batch))
         logging.debug("label: " + str(batch_y))
-        logging.debug("linear_outputs: " + str(linear_outputs))
-        logging.debug("lstm_outputs: " + str(lstm_outputs))
-        logging.debug("Decode: " + str(decode))
+        logging.debug("linear_outputs: " + str(batch_linear_outputs))
+        logging.debug("lstm_outputs: " + str(batch_lstm_outputs))
+        logging.debug("Decode: " + str(batch_decode))
         # transfer the result to picture.
         img_label = Image.fromarray(np.uint8(batch_y[0]))
         img_linear_outputs = Image.fromarray(np.uint8(np.array(batch_linear_outputs)))
