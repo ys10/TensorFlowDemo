@@ -105,9 +105,9 @@ for iter in range(0, training_iters, 1):
             batch_x.append(sentence_x)
             batch_y.append(sentence_y)
             #
-            linear_outputs = result_data['iter0/linear_output/' + trunk_name]
-            lstm_outputs = result_data['iter0/lstm_output/' + trunk_name]
-            decode = result_data['iter0/decode/' + trunk_name]
+            linear_outputs = result_data['iter0/linear_output/' + trunk_name.strip('\n')]
+            lstm_outputs = result_data['iter0/lstm_output/' + trunk_name.strip('\n')]
+            decode = result_data['iter0/decode/' + trunk_name.strip('\n')]
             #
             batch_lstm_outputs.append(lstm_outputs)
             batch_linear_outputs.append(linear_outputs)
