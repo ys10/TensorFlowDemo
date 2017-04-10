@@ -13,8 +13,7 @@ import tensorflow as tf
 import h5py
 import math
 from tensorflow.contrib import rnn
-from src.lstm.utils import pad_sequences as pad_sequences
-from src.lstm.utils import sparse_tuple_from as sparse_tuple_from
+from src.lstm.utils import *
 
 try:
     from tensorflow.python.ops import ctc_ops
