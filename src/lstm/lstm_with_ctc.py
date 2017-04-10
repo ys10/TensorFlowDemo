@@ -160,7 +160,7 @@ with tf.variable_scope("LSTM") as vs:
 
     # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
     # (it's slower but you'll get better results)
-    decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    decoded, log_prob = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
     ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))

@@ -109,3 +109,14 @@ def tensor_to_array(tensor):
     #         array.append(sub_array)
 
     return array
+
+def transpose_dimension(list):
+    result = []
+    array = np.array(list)
+    rows, cols = array.shape[0], array.shape[1]
+    for j in range(0, cols):
+        row = []
+        for i in range(0, rows):
+            row.append(array[i][j])
+        result.append(row)
+    return result

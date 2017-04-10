@@ -5,8 +5,8 @@ import h5py
 import configparser
 import logging
 import tensorflow as tf
-from src.lstm.utils import pad_sequences
-from src.lstm.utils import sparse_tuple_from
+import matplotlib.pyplot as plt
+from src.lstm.utils import *
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()
@@ -50,6 +50,7 @@ batch_size = 1
 display_batch = 1
 training_iters = 1
 n_steps = 777 # time steps
+n_classes = 50
 
 all_trunk_names = groups.readlines()
 for iter in range(0, training_iters, 1):
@@ -91,24 +92,25 @@ for iter in range(0, training_iters, 1):
                 logging.info("trunk_name_index >= len(all_trunk_names), trunk_name_index is:" + str(
                     trunk_name_index) + "len(all_trunk_names):" + str(len(all_trunk_names)))
             # Get trunk name from all trunk names by trunk name index.
-            trunk_name = all_trunk_names[trunk_name_index]
+            trunk_name = all_trunk_names[trunk_name_index].strip('\n')
             logging.debug("trunk_name: " + trunk_name)
             # print("trunk_name: " + trunk_name)
             # print("length:"+ len(trunk_name))
             # Get trunk data by trunk name without line break character.
             # sentence_x is a tensor of shape (n_steps, n_inputs)
-            sentence_x = test_data['source/' + trunk_name.strip('\n')]
+            sentence_x = test_data['source/' + trunk_name]
             # sentence_y is a tensor of shape (None)
-            sentence_y = test_data['target/' + trunk_name.strip('\n')]
+            sentence_y = test_data['target/' + trunk_name]
             # sentence_len is a tensor of shape (None)
-            sentence_len = test_data['size/' + trunk_name.strip('\n')].value
+            sentence_len = test_data['size/' + trunk_name].value
             # Add current trunk into the batch.
             batch_x.append(sentence_x)
             batch_y.append(sentence_y)
             #
-            linear_outputs = tf.concat(0, result_data['iter0/linear_output/' + trunk_name.strip('\n')].value)
-            lstm_outputs = tf.concat(0, result_data['iter0/lstm_output/' + trunk_name.strip('\n')].value)
-            decode = tf.concat(0, result_data['iter0/decode/' + trunk_name.strip('\n')].value)
+            linear_outputs = result_data['iter0/linear_output/' + trunk_name].value[0]
+            lstm_outputs = result_data['iter0/lstm_output/' + trunk_name].value[0]
+            decode = result_data['iter0/decode/' + trunk_name].value[0]
+            logging.debug("linear_outputs shape: " + str(linear_outputs.shape))
             #
             batch_lstm_outputs.append(lstm_outputs)
             batch_linear_outputs.append(linear_outputs)
@@ -121,19 +123,27 @@ for iter in range(0, training_iters, 1):
         # TODO
         # Print the data info.
         logging.debug("Batch: " + str(batch))
-        logging.debug("label: " + str(batch_y))
         logging.debug("linear_outputs: " + str(batch_linear_outputs))
-        logging.debug("lstm_outputs: " + str(batch_lstm_outputs))
+        # logging.debug("lstm_outputs: " + str(batch_lstm_outputs))
+        logging.debug("label: " + str(batch_y[1]))
         logging.debug("Decode: " + str(batch_decode))
         # transfer the result to picture.
-        img_label = Image.fromarray(np.uint8(batch_y[0]))
-        img_label.save(image_dir + "img_label" + trunk_name + ".png", "png")
-        img_linear_outputs = Image.fromarray(np.uint8(np.array(batch_linear_outputs)))
-        img_lstm_outputs = Image.fromarray(np.uint8(np.array(batch_lstm_outputs)))
+        # img_label = Image.fromarray(np.uint8(batch_y[0]))
+        # img_label.save(image_dir + "img_label" + trunk_name + ".png", "png")
+        # img_linear_outputs = Image.fromarray(np.uint8(np.array(batch_linear_outputs)))
+        # img_lstm_outputs = Image.fromarray(np.uint8(np.array(batch_lstm_outputs)))
         # show the result by picture.
-
-        img_linear_outputs.save(image_dir + "img_linear_outputs" + trunk_name + ".png", "png")
-        img_lstm_outputs.save(image_dir + "img_lstm_outputs" + trunk_name + ".png", "png")
+        plt.figure(1)
+        ax = plt.subplot(111)
+        x = np.linspace(0, n_steps, n_steps)
+        legend = [x for x in range(0, n_classes)]
+        plt.figure(1)
+        line = ax.plot(x, batch_linear_outputs[0])
+        ax.legend(line, legend)
+        plt.show()
+        # Save picture.
+        # img_linear_outputs.save(image_dir + "img_linear_outputs" + trunk_name + ".png", "png")
+        # img_lstm_outputs.save(image_dir + "img_lstm_outputs" + trunk_name + ".png", "png")
         # Print the batch time.
         logging.debug("time: {:.3f}".format(time.time() - start))
-        break;
+        break
