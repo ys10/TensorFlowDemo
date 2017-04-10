@@ -227,7 +227,8 @@ with tf.variable_scope("LSTM") as vs:
                         trunk_name_index = len(all_trunk_names)-1
                         logging.info("trunk_name_index >= len(all_trunk_names), trunk_name_index is:"+ str(trunk_name_index)+"len(all_trunk_names):"+str(len(all_trunk_names)))
                     # Get trunk name from all trunk names by trunk name index.
-                    trunk_name = all_trunk_names[trunk_name_index]
+                    trunk_name = all_trunk_names[trunk_name_index].split()[0]
+                    # trunk_name = all_trunk_names[trunk_name_index]
                     logging.debug("trunk_name: " + trunk_name)
                     # Get trunk data by trunk name without line break character.
                     # sentence_x is a tensor of shape (n_steps, n_inputs)
