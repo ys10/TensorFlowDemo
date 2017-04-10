@@ -61,10 +61,10 @@ Because trunk shape is 200*69,
 we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
-learning_rate = 0.0001
+learning_rate = 0.00001
 batch_size = 16
 display_batch = 1
-training_iters = 5
+training_epoch = 30
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -75,7 +75,7 @@ keep_prob = 1.0
 # n_classes = 49 # total classes
 
 n_input = 36 # data input
-n_steps = 1496 # time steps
+n_steps = 1500 # time steps
 n_classes = 47 # total classes
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
@@ -172,7 +172,7 @@ with tf.variable_scope("LSTM") as vs:
     # Initialize the saver to save session.
     lstm_variables = [v for v in tf.global_variables()
                         if v.name.startswith(vs.name)]
-    saver = tf.train.Saver(lstm_variables)
+    saver = tf.train.Saver(lstm_variables, max_to_keep=30)
     saved_model_path = cp.get('model', 'saved_model_path')
     to_save_model_path = cp.get('model', 'to_save_model_path')
 
@@ -182,18 +182,20 @@ with tf.variable_scope("LSTM") as vs:
         # Initializing the variables
         init = tf.global_variables_initializer()
         sess.run(init)
-        saver.restore(sess, saved_model_path)
-        logging.info("Model restored from file: " + saved_model_path)
-        # Keep training until reach max iterations
+        # saver.restore(sess, saved_model_path)
+        # logging.info("Model restored from file: " + saved_model_path)
+        # Keep training until reach max epoch
         logging.info("Start training!")
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
-        for iter in range(0, training_iters, 1):
+        for epoch in range(0, training_epoch, 1):
+            if epoch >= 15:
+                learning_rate *= 0.95
             train_cost = train_ler = 0
             start = time.time()
-            # For each iteration.
-            logging.debug("Iter:" + str(iter))
-            # Break out of the training iteration while there is no trunk usable.
+            # For each epoch.
+            logging.debug("epoch:" + str(epoch))
+            # Break out of the training epoch while there is no trunk usable.
             if not all_trunk_names:
                 break
             logging.debug("number of trunks:"+str(len(all_trunk_names)))
@@ -264,19 +266,16 @@ with tf.variable_scope("LSTM") as vs:
                     # Calculate batch loss.
                     logging.debug("batch_y: "+str(batch_y))
                     loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
-                    logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
+                    logging.debug("epoch:" + str(epoch) + ",Batch:"+ str(batch)
                           + ", Batch Loss= {:.6f}".format(loss) + ", Batch ler= {:.6f}".format(batch_ler))
                     logging.debug("Decode:" + str(batch_decode))
-                    # logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
-                    #       + ", Batch Loss= {:.6f}".format(loss)
-                    #       + ", Training Accuracy= {:.5f}".format(acc))
                 # break;
             # Metrics mean
             train_cost /= (batch_size * n_batches)
             train_ler /= (batch_size * n_batches)
-            log = "Iter {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
-            logging.info(log.format(iter+1, training_iters, train_cost, train_ler, time.time() - start))
-            # Save session by iteration.
-            saver.save(sess, to_save_model_path, global_step=iter);
+            log = "epoch {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
+            logging.info(log.format(epoch+1, training_epoch, train_cost, train_ler, time.time() - start))
+            # Save session by epoch.
+            saver.save(sess, to_save_model_path, global_step=epoch);
             logging.info("Model saved successfully to: " + to_save_model_path)
         logging.info("Optimization Finished!")
