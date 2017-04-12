@@ -171,7 +171,7 @@ with tf.variable_scope("LSTM") as vs:
     # Initialize the saver to save session.
     lstm_variables = [v for v in tf.global_variables()
                         if v.name.startswith(vs.name)]
-    saver = tf.train.Saver(lstm_variables, max_to_keep=30)
+    saver = tf.train.Saver(lstm_variables, max_to_keep=50)
     saved_model_path = cp.get('model', 'saved_model_path')
     to_save_model_path = cp.get('model', 'to_save_model_path')
 
@@ -181,13 +181,13 @@ with tf.variable_scope("LSTM") as vs:
         # Initializing the variables
         init = tf.global_variables_initializer()
         sess.run(init)
-        # saver.restore(sess, saved_model_path)
-        # logging.info("Model restored from file: " + saved_model_path)
+        saver.restore(sess, saved_model_path)
+        logging.info("Model restored from file: " + saved_model_path)
         # Keep training until reach max epoch
         logging.info("Start training!")
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
-        for epoch in range(0, training_epoch, 1):
+        for epoch in range(5, training_epoch, 1):
             if epoch >= 15:
                 learning_rate *= 0.95
             train_cost = train_ler = 0
@@ -227,17 +227,17 @@ with tf.variable_scope("LSTM") as vs:
                         trunk_name_index = len(all_trunk_names)-1
                         logging.info("trunk_name_index >= len(all_trunk_names), trunk_name_index is:"+ str(trunk_name_index)+"len(all_trunk_names):"+str(len(all_trunk_names)))
                     # Get trunk name from all trunk names by trunk name index.
-                    trunk_name = all_trunk_names[trunk_name_index].split()[0]
-                    # trunk_name = all_trunk_names[trunk_name_index]
+                    # trunk_name = all_trunk_names[trunk_name_index].split()[0]
+                    trunk_name = all_trunk_names[trunk_name_index].strip('\n')
                     logging.debug("trunk_name: " + trunk_name)
                     # Get trunk data by trunk name without line break character.
                     # sentence_x is a tensor of shape (n_steps, n_inputs)
-                    sentence_x = training_data_file['source/' + trunk_name.strip('\n')]
+                    sentence_x = training_data_file['source/' + trunk_name]
                     # sentence_y is a tensor of shape (None)
                     # sentence_y = training_data_file['target/' + trunk_name.strip('\n')].value
-                    sentence_y = training_data_file['target/' + trunk_name.strip('\n')]
+                    sentence_y = training_data_file['target/' + trunk_name]
                     # sentence_len is a tensor of shape (None)
-                    sentence_len = training_data_file['size/' + trunk_name.strip('\n')].value
+                    sentence_len = training_data_file['size/' + trunk_name].value
 
                     # print(sentence_y.value)
                     # Add current trunk into the batch.

@@ -184,7 +184,7 @@ with tf.variable_scope("LSTM") as vs:
                 for trunk in range(0, batch_size, 1):
                     # For each trunk in the batch.
                     # Calculate the index of current trunk in the whole data set.
-                    trunk_name_index = n_batches * batch_size + trunk
+                    trunk_name_index = batch * batch_size + trunk
                     # There is a fact that if the number of all trunks
                     #   can not be divisible by batch size,
                     #   then the last batch can not get enough trunks of batch size.
