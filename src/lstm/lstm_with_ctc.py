@@ -152,6 +152,7 @@ with tf.variable_scope("LSTM") as vs:
     # Define loss and optimizer.
     cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
     # correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
@@ -159,10 +160,12 @@ with tf.variable_scope("LSTM") as vs:
 
     # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
     # (it's slower but you'll get better results)
-    decoded, log_prob = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    beam_decoded, _ = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    greedy_decoded, _ = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
-    ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
+    beam_ler = tf.reduce_mean(tf.edit_distance(tf.cast(beam_decoded[0], tf.int32), y))
+    greedy_ler = tf.reduce_mean(tf.edit_distance(tf.cast(greedy_decoded[0], tf.int32), y))
 
     # Configure session
     config = tf.ConfigProto()
@@ -190,7 +193,7 @@ with tf.variable_scope("LSTM") as vs:
         for epoch in range(5, training_epoch, 1):
             if epoch >= 15:
                 learning_rate *= 0.95
-            train_cost = train_ler = 0
+            train_cost = train_greedy_ler = train_beam_ler = 0
             start = time.time()
             # For each epoch.
             logging.debug("epoch:" + str(epoch))
@@ -256,9 +259,15 @@ with tf.variable_scope("LSTM") as vs:
                 feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
                 batch_cost, _ = sess.run([cost, optimizer], feed_dict)
                 train_cost += batch_cost * batch_size
-                batch_ler = sess.run(ler, feed_dict)
-                train_ler += batch_ler * batch_size
-                batch_decode = sess.run(decoded, feed_dict)
+                # ler
+                batch_greedy_ler = sess.run(greedy_ler, feed_dict)
+                train_greedy_ler += batch_greedy_ler * batch_size
+                #
+                batch_beam_ler = sess.run(beam_ler, feed_dict)
+                train_beam_ler += batch_beam_ler * batch_size
+                # decode
+                batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
+                batch_beam_decode = sess.run(beam_decoded, feed_dict)
                 # Print accuracy by display_batch.
                 if batch % display_batch == 0:
                     # Calculate batch accuracy.
@@ -266,15 +275,17 @@ with tf.variable_scope("LSTM") as vs:
                     # Calculate batch loss.
                     logging.debug("batch_y: "+str(batch_y))
                     loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
-                    logging.debug("epoch:" + str(epoch) + ",Batch:"+ str(batch)
-                          + ", Batch Loss= {:.6f}".format(loss) + ", Batch ler= {:.6f}".format(batch_ler))
-                    logging.debug("Decode:" + str(batch_decode))
+                    logging.debug("epoch:" + str(epoch) + ",Batch:"+ str(batch) + ", Batch Loss= {:.6f}".format(loss)
+                                  + ", Batch beam ler= {:.6f}".format(batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
+                    logging.debug("beam decode:" + str(batch_beam_decode))
+                    logging.debug("greddy decode:" + str(batch_greedy_decode))
                 # break;
             # Metrics mean
             train_cost /= (batch_size * n_batches)
-            train_ler /= (batch_size * n_batches)
-            log = "epoch {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, time = {:.3f}"
-            logging.info(log.format(epoch+1, training_epoch, train_cost, train_ler, time.time() - start))
+            train_beam_ler /= (batch_size * n_batches)
+            train_greedy_ler /= (batch_size * n_batches)
+            log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
+            logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
             # Save session by epoch.
             saver.save(sess, to_save_model_path, global_step=epoch);
             logging.info("Model saved successfully to: " + to_save_model_path)
