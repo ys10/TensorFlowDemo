@@ -125,7 +125,6 @@ with tf.variable_scope("LSTM") as vs:
         linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
         outputs_array = tensor_to_array(outputs)
         lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
-        # decode_array = tf.cast(decoded[0], tf.int32)
         greedy_decode_grp.create_dataset(trunk_name, shape = greedy_decoded[0].dense_shape, data = greedy_decoded[0].values, dtype = 'i')
         beam_decode_grp.create_dataset(trunk_name, shape = beam_decoded[0].dense_shape, data = beam_decoded[0].values, dtype='i')
         return
