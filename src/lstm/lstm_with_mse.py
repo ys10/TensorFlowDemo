@@ -14,7 +14,7 @@ from math import ceil
 from tensorflow.contrib import rnn
 import time
 import os
-from src.lstm.utils import pad_sequences as pad_sequences
+from src.lstm.utils import *
 
 # Import configuration by config parser.
 cp = configparser.ConfigParser()

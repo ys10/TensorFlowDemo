@@ -151,7 +151,7 @@ with tf.variable_scope("LSTM") as vs:
 
     # Define loss and optimizer.
     cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+    # optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
