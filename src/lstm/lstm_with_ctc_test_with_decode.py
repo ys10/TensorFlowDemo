@@ -73,7 +73,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 1
 display_batch = 1
-training_iters = 1
+training_epochs = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -119,14 +119,15 @@ with tf.variable_scope("LSTM") as vs:
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
     # Define output saving function
-    def output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, logits, outputs, decode):
+    def output_data_saving(trunk_name, lstm_grp, linear_grp, greedy_decode_grp, beam_decode_grp, logits, outputs, greedy_decoded, beam_decoded):
         # Sub group.
         logits_array = tensor_to_array(logits)
         linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
         outputs_array = tensor_to_array(outputs)
         lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
         # decode_array = tf.cast(decoded[0], tf.int32)
-        decode_grp.create_dataset(trunk_name, shape = decode[0].dense_shape, data = decode[0].values, dtype = 'i')
+        greedy_decode_grp.create_dataset(trunk_name, shape = greedy_decoded[0].dense_shape, data = greedy_decoded[0].values, dtype = 'i')
+        beam_decode_grp.create_dataset(trunk_name, shape = beam_decoded[0].dense_shape, data = beam_decoded[0].values, dtype='i')
         return
 
     # Define LSTM as a RNN.
@@ -149,18 +150,15 @@ with tf.variable_scope("LSTM") as vs:
 
     # Define loss and optimizer.
     cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
-    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
-
-    # Evaluate
-    # correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
-    # accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
     # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
     # (it's slower but you'll get better results)
-    decoded, log_prob = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    beam_decoded, _ = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    greedy_decoded, _ = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
-    ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), y))
+    beam_ler = tf.reduce_mean(tf.edit_distance(tf.cast(beam_decoded[0], tf.int32), y))
+    greedy_ler = tf.reduce_mean(tf.edit_distance(tf.cast(greedy_decoded[0], tf.int32), y))
 
     # Configure session
     config = tf.ConfigProto()
@@ -182,15 +180,17 @@ with tf.variable_scope("LSTM") as vs:
         logging.info("Start training!")
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
-        for iter in range(0, training_iters, 1):
+        for epoch in range(0, training_epochs, 1):
+            train_cost = train_greedy_ler = train_beam_ler = 0
             start = time.time()
             # For each iteration.
-            logging.debug("Iter:" + str(iter))
+            logging.debug("epoch:" + str(epoch))
             # Output groups.
-            iter_grp = outpout_data_file.create_group("iter" + str(iter))
-            lstm_grp = iter_grp.create_group("lstm_output")
-            linear_grp = iter_grp.create_group("linear_output")
-            decode_grp = iter_grp.create_group("decode")
+            epoch_grp = outpout_data_file.create_group("epoch" + str(epoch))
+            lstm_grp = epoch_grp.create_group("lstm_output")
+            linear_grp = epoch_grp.create_group("linear_output")
+            beam_decode_grp = epoch_grp.create_group("beam_decode")
+            greedy_decode_grp = epoch_grp.create_group("greedy_decode")
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
@@ -230,17 +230,26 @@ with tf.variable_scope("LSTM") as vs:
                 linear_outputs  = sess.run(pred, feed_dict)
                 lstm_outputs = sess.run(outputs, feed_dict)
                 batch_cost = sess.run(cost, feed_dict)
-                decode = sess.run(decoded, feed_dict)
-                batch_ler = sess.run(ler, feed_dict)
-                output_data_saving(trunk_name, lstm_grp, linear_grp, decode_grp, linear_outputs, lstm_outputs, decode)
+                # ler
+                batch_greedy_ler = sess.run(greedy_ler, feed_dict)
+                train_greedy_ler += batch_greedy_ler * batch_size
+                #
+                batch_beam_ler = sess.run(beam_ler, feed_dict)
+                train_beam_ler += batch_beam_ler * batch_size
+                # decode
+                batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
+                batch_beam_decode = sess.run(beam_decoded, feed_dict)
+                output_data_saving(trunk_name, lstm_grp, linear_grp, beam_decode_grp, greedy_decode_grp, linear_outputs, lstm_outputs, greedy_decoded, beam_decoded)
                 logging.debug("Trunk: " + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 logging.debug("label: " + str(batch_y))
                 logging.debug("linear_outputs: " + str(linear_outputs))
                 logging.debug("lstm_outputs: " + str(lstm_outputs))
-                logging.debug("Decode: " + str(decode))
-                logging.debug("ler:{:.8f}".format(batch_ler))
+                logging.debug("beam decode:" + str(batch_beam_decode))
+                logging.debug("greedy decode:" + str(batch_greedy_decode))
+                logging.debug("Batch beam ler= {:.6f}".format(batch_beam_ler))
+                logging.debug("Batch greddy ler= {:.6f}".format(batch_greedy_ler))
                 trunk += 1
-                if trunk >=2:
-                    break;
+                # if trunk >=2:
+                #     break;
             # break;
         logging.info("Testing Finished!")
