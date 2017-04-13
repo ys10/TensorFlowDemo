@@ -119,18 +119,15 @@ with tf.variable_scope("LSTM") as vs:
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
     # Define output saving function
-    def output_data_saving(trunk_name, lstm_grp, linear_grp, greedy_decode_grp, beam_decode_grp, logits, outputs, greedy_decoded, beam_decoded):
+    def output_data_saving(trunk_name, lstm_grp, linear_grp, greedy_decode_grp, beam_decode_grp, logits, outputs, greedy_decode, beam_decode):
         # Sub group.
         logits_array = tensor_to_array(logits)
         linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
         outputs_array = tensor_to_array(outputs)
         lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
         #
-        greedy_decoded_array = tensor_to_array(greedy_decoded[0].values)
-        greedy_decode_grp.create_dataset(trunk_name, shape = greedy_decoded_array.shape, data = greedy_decoded_array, dtype = 'i')
-        #
-        beam_decoded_array = tensor_to_array(beam_decoded[0].values)
-        beam_decode_grp.create_dataset(trunk_name, shape = beam_decoded_array.shape, data = beam_decoded_array, dtype = 'i')
+        greedy_decode_grp.create_dataset(trunk_name, shape = greedy_decode[0].dense_shape, data = greedy_decode[0].values, dtype = 'i')
+        beam_decode_grp.create_dataset(trunk_name, shape = beam_decode[0].dense_shape, data = beam_decode[0].values, dtype='i')
         return
 
     # Define LSTM as a RNN.
@@ -156,12 +153,12 @@ with tf.variable_scope("LSTM") as vs:
 
     # Option 2: tf.contrib.ctc.ctc_beam_search_decoder
     # (it's slower but you'll get better results)
-    beam_decoded, _ = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
-    greedy_decoded, _ = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    beam_decode, _ = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
+    greedy_decode, _ = ctc_ops.ctc_greedy_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
 
     # Inaccuracy: label error rate
-    beam_ler = tf.reduce_mean(tf.edit_distance(tf.cast(beam_decoded[0], tf.int32), y))
-    greedy_ler = tf.reduce_mean(tf.edit_distance(tf.cast(greedy_decoded[0], tf.int32), y))
+    beam_ler = tf.reduce_mean(tf.edit_distance(tf.cast(beam_decode[0], tf.int32), y))
+    greedy_ler = tf.reduce_mean(tf.edit_distance(tf.cast(greedy_decode[0], tf.int32), y))
 
     # Configure session
     config = tf.ConfigProto()
@@ -240,9 +237,9 @@ with tf.variable_scope("LSTM") as vs:
                 batch_beam_ler = sess.run(beam_ler, feed_dict)
                 train_beam_ler += batch_beam_ler * batch_size
                 # decode
-                batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
-                batch_beam_decode = sess.run(beam_decoded, feed_dict)
-                output_data_saving(trunk_name, lstm_grp, linear_grp, beam_decode_grp, greedy_decode_grp, logits = linear_outputs, outputs = lstm_outputs, greedy_decoded= greedy_decoded, beam_decoded = beam_decoded)
+                batch_greedy_decode = sess.run(greedy_decode, feed_dict)
+                batch_beam_decode = sess.run(beam_decode, feed_dict)
+                output_data_saving(trunk_name, lstm_grp, linear_grp, beam_decode_grp, greedy_decode_grp, linear_outputs, lstm_outputs, batch_greedy_decode, batch_beam_decode)
                 logging.debug("Trunk: " + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 logging.debug("label: " + str(batch_y))
                 logging.debug("linear_outputs: " + str(linear_outputs))
