@@ -73,7 +73,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.001
 batch_size = 1
 display_batch = 1
-training_epochs = 1
+training_iters = 1
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -179,17 +179,17 @@ with tf.variable_scope("LSTM") as vs:
         logging.info("Start training!")
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
-        for epoch in range(0, training_epochs, 1):
+        for iter in range(0, training_iters, 1):
             train_cost = train_greedy_ler = train_beam_ler = 0
             start = time.time()
             # For each iteration.
-            logging.debug("epoch:" + str(epoch))
+            logging.debug("iter:" + str(iter))
             # Output groups.
-            epoch_grp = outpout_data_file.create_group("epoch" + str(epoch))
-            lstm_grp = epoch_grp.create_group("lstm_output")
-            linear_grp = epoch_grp.create_group("linear_output")
-            beam_decode_grp = epoch_grp.create_group("beam_decode")
-            greedy_decode_grp = epoch_grp.create_group("greedy_decode")
+            iter_grp = outpout_data_file.create_group("iter" + str(iter))
+            lstm_grp = iter_grp.create_group("lstm_output")
+            linear_grp = iter_grp.create_group("linear_output")
+            beam_decode_grp = iter_grp.create_group("beam_decode")
+            greedy_decode_grp = iter_grp.create_group("greedy_decode")
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
