@@ -125,8 +125,8 @@ with tf.variable_scope("LSTM") as vs:
         linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
         outputs_array = tensor_to_array(outputs)
         lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
-        greedy_decode_grp.create_dataset(trunk_name, shape = greedy_decoded[0].dense_shape, data = greedy_decoded[0].values, dtype = 'i')
-        beam_decode_grp.create_dataset(trunk_name, shape = beam_decoded[0].dense_shape, data = beam_decoded[0].values, dtype='i')
+        greedy_decode_grp.create_dataset(trunk_name, shape = (1, len(greedy_decoded[0].values)), data = greedy_decoded[0].values, dtype = 'i')
+        beam_decode_grp.create_dataset(trunk_name, shape = (1, len(beam_decoded[0].values)), data = beam_decoded[0].values, dtype='i')
         return
 
     # Define LSTM as a RNN.
@@ -238,7 +238,7 @@ with tf.variable_scope("LSTM") as vs:
                 # decode
                 batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
                 batch_beam_decode = sess.run(beam_decoded, feed_dict)
-                output_data_saving(trunk_name, lstm_grp, linear_grp, beam_decode_grp, greedy_decode_grp, linear_outputs, lstm_outputs, greedy_decoded, beam_decoded)
+                output_data_saving(trunk_name, lstm_grp, linear_grp, beam_decode_grp, greedy_decode_grp, logits = linear_outputs, outputs = lstm_outputs, greedy_decoded= greedy_decoded, beam_decoded = beam_decoded)
                 logging.debug("Trunk: " + str(trunk) + " name:" + str(trunk_name) + ", cost = {}, time = {:.3f}".format(batch_cost, time.time() - start))
                 logging.debug("label: " + str(batch_y))
                 logging.debug("linear_outputs: " + str(linear_outputs))
