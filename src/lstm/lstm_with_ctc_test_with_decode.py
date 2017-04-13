@@ -125,8 +125,12 @@ with tf.variable_scope("LSTM") as vs:
         linear_grp.create_dataset(trunk_name, shape = logits.shape, data = logits_array, dtype = 'f')
         outputs_array = tensor_to_array(outputs)
         lstm_grp.create_dataset(trunk_name, shape = outputs.shape, data = outputs_array, dtype = 'f')
-        greedy_decode_grp.create_dataset(trunk_name, shape = (1, len(greedy_decoded[0].values)), data = greedy_decoded[0].values, dtype = 'i')
-        beam_decode_grp.create_dataset(trunk_name, shape = (1, len(beam_decoded[0].values)), data = beam_decoded[0].values, dtype='i')
+        #
+        greedy_decoded_array = tensor_to_array(greedy_decoded[0].values)
+        greedy_decode_grp.create_dataset(trunk_name, shape = greedy_decoded_array.shape, data = greedy_decoded_array, dtype = 'i')
+        #
+        beam_decoded_array = tensor_to_array(beam_decoded[0].values)
+        beam_decode_grp.create_dataset(trunk_name, shape = beam_decoded_array.shape, data = beam_decoded_array, dtype = 'i')
         return
 
     # Define LSTM as a RNN.
