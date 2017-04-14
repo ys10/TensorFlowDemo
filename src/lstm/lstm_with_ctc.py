@@ -63,7 +63,9 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 learning_rate = 0.00001
 batch_size = 16
 display_batch = 1
-training_epoch = 30
+save_batch = 10
+training_epoch = 500
+start_epoch = 30
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -174,7 +176,7 @@ with tf.variable_scope("LSTM") as vs:
     # Initialize the saver to save session.
     lstm_variables = [v for v in tf.global_variables()
                         if v.name.startswith(vs.name)]
-    saver = tf.train.Saver(lstm_variables, max_to_keep=50)
+    saver = tf.train.Saver(lstm_variables, max_to_keep=training_epoch)
     saved_model_path = cp.get('model', 'saved_model_path')
     to_save_model_path = cp.get('model', 'to_save_model_path')
 
@@ -190,7 +192,7 @@ with tf.variable_scope("LSTM") as vs:
         logging.info("Start training!")
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
-        for epoch in range(5, training_epoch, 1):
+        for epoch in range(start_epoch, training_epoch, 1):
             if epoch >= 15:
                 learning_rate *= 0.95
             train_cost = train_greedy_ler = train_beam_ler = 0
@@ -287,6 +289,7 @@ with tf.variable_scope("LSTM") as vs:
             log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
             # Save session by epoch.
-            saver.save(sess, to_save_model_path, global_step=epoch);
-            logging.info("Model saved successfully to: " + to_save_model_path)
+            if epoch % save_batch ==0:
+                saver.save(sess, to_save_model_path, global_step=epoch);
+                logging.info("Model saved successfully to: " + to_save_model_path)
         logging.info("Optimization Finished!")
