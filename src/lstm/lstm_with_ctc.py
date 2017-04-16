@@ -199,6 +199,7 @@ with tf.variable_scope("LSTM") as vs:
             start = time.time()
             # For each epoch.
             logging.debug("epoch:" + str(epoch))
+            logging.debug("learning_rate: "+ str(learning_rate))
             # Break out of the training epoch while there is no trunk usable.
             if not all_trunk_names:
                 break
