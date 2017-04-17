@@ -60,7 +60,7 @@ Because trunk shape is 200*69,
 we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
-learning_rate = 0.00001
+learning_rate = 0.0000001
 batch_size = 16
 display_batch = 1
 save_batch = 10
