@@ -142,7 +142,7 @@ with tf.variable_scope("LSTM") as vs:
     # Define loss and optimizer.
     loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
     cost = tf.reduce_mean(loss)
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
     correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
@@ -172,8 +172,11 @@ with tf.variable_scope("LSTM") as vs:
         # Read all trunk names.
         all_trunk_names = trunk_names_file.readlines()
         for iter in range(0, training_iters, 1):
+            if iter >= 15:
+                learning_rate *= 0.95
             # For each iteration.
             logging.debug("Iter:" + str(iter))
+            logging.debug("learning_rate: " + str(learning_rate))
             # Break out of the training iteration while there is no trunk usable.
             if not all_trunk_names:
                 break
