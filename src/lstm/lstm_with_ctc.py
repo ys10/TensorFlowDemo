@@ -71,13 +71,13 @@ start_epoch = 30
 keep_prob = 1.0
 
 # Network Parameters
-# n_input = 69 # data input
-# n_steps = 777 # time steps
-# n_classes = 49 # total classes
+n_input = 69 # data input
+n_steps = 777 # time steps
+n_classes = 50 # total classes
 
-n_input = 36 # data input
-n_steps = 1500 # time steps
-n_classes = 47 # total classes
+# n_input = 36 # data input
+# n_steps = 1500 # time steps
+# n_classes = 47 # total classes
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
 
