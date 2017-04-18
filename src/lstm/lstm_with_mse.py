@@ -56,7 +56,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 
 # Parameters
-learning_rate = 0.001
+learning_rate = 0.000001
 batch_size = 16
 display_batch = 1
 training_iters = 10
@@ -67,11 +67,16 @@ keep_prob = 1.0
 truncated_step = 100
 
 # Network Parameters
-n_input = 36 # data input
-n_steps = 200 # time steps
+n_input = 69 # data input
+n_steps = 777 # time steps
+n_classes = 50 # total classes
+
+# n_input = 36 # data input
+# n_steps = 200 # time steps
+# n_classes = 47 # total classes
+
 n_hidden = 384 # hidden layer num of features
 n_layers = 2 # num of hidden layers
-n_classes = 47 # total classes
 
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
