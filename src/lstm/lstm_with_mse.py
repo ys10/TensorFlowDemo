@@ -160,7 +160,7 @@ with tf.variable_scope("LSTM") as vs:
     lstm_variables = [v for v in tf.global_variables()
                         if v.name.startswith(vs.name)]
     saver = tf.train.Saver(lstm_variables)
-    saved_model_path = cp.get('model', 'to_save_model_path')
+    to_save_model_path = cp.get('model', 'to_save_model_path')
 
     # Launch the graph
     with tf.Session(config=config) as sess:
@@ -229,6 +229,6 @@ with tf.variable_scope("LSTM") as vs:
                           + ", Training Accuracy= {:.5f}".format(acc))
                 # break;
             # Save session by iteration.
-            saver.save(sess, saved_model_path, global_step=iter);
-            logging.info("Model saved successfully!")
+            saver.save(sess, to_save_model_path, global_step=iter);
+            logging.info("Model saved successfully to: " + to_save_model_path)
         logging.info("Optimization Finished!")
