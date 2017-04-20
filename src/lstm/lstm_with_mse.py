@@ -123,7 +123,7 @@ with tf.variable_scope("LSTM") as vs:
         #     outputs, states = cell(x[i][:][:], states)
         _, states = rnn.static_rnn(stack, x[:truncated_step][:][:], initial_state= states, dtype=tf.float32)
         # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
-        tf.get_variable_scope().reuse_variables()
+        # tf.get_variable_scope().reuse_variables()
         outputs, states = rnn.static_rnn(stack, x[truncated_step:][:][:],
                                          initial_state= states, dtype=tf.float32)
         outputs = tf.reshape(outputs, [-1, n_hidden])
