@@ -117,15 +117,16 @@ with tf.variable_scope("LSTM") as vs:
         # Initialize the states of LSTM.
         # cell.zero_state(batch_size, dtype = tf.float32)
         # states = tf.zeros([batch_size, n_hidden * n_layers])
-        states = stack.zero_state(batch_size, dtype=tf.float32)
+        # states = stack.zero_state(batch_size, dtype=tf.float32)
         # BPTT
         # for i in range(truncated_step):
         #     outputs, states = cell(x[i][:][:], states)
-        _, states = rnn.static_rnn(stack, x[:truncated_step][:][:], initial_state= states, dtype=tf.float32)
+        outputs, _ = rnn.static_rnn(stack, x, dtype=tf.float32)
+        # _, states = rnn.static_rnn(stack, x[:truncated_step], initial_state=states, dtype=tf.float32)
         # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
         # tf.get_variable_scope().reuse_variables()
-        outputs, states = rnn.static_rnn(stack, x[truncated_step:][:][:],
-                                         initial_state= states, dtype=tf.float32)
+        # outputs, states = tf.nn.dynamic_rnn(stack, x[truncated_step:][:][:],
+        #                                  initial_state= states, dtype=tf.float32)
         outputs = tf.reshape(outputs, [-1, n_hidden])
         # Now, shape of outputs is (batch_size, n_steps, n_input)
         # Linear activation, using rnn inner loop last output
@@ -142,6 +143,7 @@ with tf.variable_scope("LSTM") as vs:
     # Define loss and optimizer.
     loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
     cost = tf.reduce_mean(loss)
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate

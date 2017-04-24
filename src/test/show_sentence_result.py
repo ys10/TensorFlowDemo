@@ -56,6 +56,8 @@ batch_seq_len = []
 batch_lstm_outputs = []
 batch_linear_outputs = []
 batch_decode = []
+batch_beam_decode = []
+batch_greedy_decode = []
 # Traverse all trunks of a batch.
 start = time.time()
 trunk_name = "faem0_si1392"
@@ -77,11 +79,17 @@ batch_y.append(sentence_y)
 linear_outputs = result_data['iter0/linear_output/' + trunk_name].value[0]
 lstm_outputs = result_data['iter0/lstm_output/' + trunk_name].value[0]
 decode = result_data['iter0/decode/' + trunk_name].value[0]
+# TODO
+# greedy_decode = result_data['iter0/greedy_decode/' + trunk_name].value[0]
+# beam_decode = result_data['iter0/beam_decode/' + trunk_name].value[0]
 logging.debug("linear_outputs shape: " + str(linear_outputs.shape))
 #
+batch_decode.append(decode)
+# TODO
 batch_lstm_outputs.append(lstm_outputs)
 batch_linear_outputs.append(linear_outputs)
-batch_decode.append(decode)
+# batch_beam_decode.append(beam_decode)
+# batch_greedy_decode.append(greedy_decode)
 # Process label & input.
 batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps)
 batch_y = sparse_tuple_from(batch_y)
@@ -93,6 +101,11 @@ logging.debug("label: " + str(batch_y[1]))
 logging.debug("label length: " + str(len(batch_y[1])))
 logging.debug("decode: " + str(batch_decode[0]))
 logging.debug("decode length: " + str(len(batch_decode[0])))
+# TODO
+# logging.debug("beam decode: " + str(batch_beam_decode[0]))
+# logging.debug("beam decode length: " + str(len(batch_beam_decode[0])))
+# logging.debug("greedy decode: " + str(batch_greedy_decode[0]))
+# logging.debug("greedy decode length: " + str(len(batch_greedy_decode[0])))
 
 max_prob_phome = []
 for i in range(0, n_steps, 1):
@@ -110,26 +123,40 @@ logging.debug("max prob phome in linear outputs: " +str(max_prob_phome))
 logging.debug("max prob phome in linear outputs length: " +str(len(max_prob_phome)))
 
 
-# # show the result by picture.
-# linear_outputs_array = transpose_dimension(batch_linear_outputs[0])
-# decode_phome = list(set(batch_decode[0]))
-# # print("decode phome:　" + str(decode_phome))
-# decode_phome.sort()
-# # print("decode phome:　" + str(decode_phome))
-# decode_linear_outputs_array = [linear_outputs_array[i][:] for i in decode_phome]
-# decode_linear_outputs_array = transpose_dimension(decode_linear_outputs_array)
-# print("decode_linear_outputs_array length:　" + str(len(decode_linear_outputs_array)))
-# # draw picture
-# plt.figure(1)
-# ax = plt.subplot(111)
-# x = np.linspace(0, n_steps, n_steps)
-# plt.figure(1)
-# line = ax.plot(x, decode_linear_outputs_array)
-# ax.legend(line, decode_phome)
-# plt.show()
-
 # show the result by picture.
 linear_outputs_array = transpose_dimension(batch_linear_outputs[0])
+
+#
+all_phome = [i for i in range(0, 50)]
+all_linear_outputs_array = transpose_dimension(linear_outputs_array)
+print("decode_linear_outputs_array length:　" + str(len(all_linear_outputs_array)))
+# draw picture
+plt.figure(1)
+ax = plt.subplot(111)
+x = np.linspace(0, n_steps, n_steps)
+plt.figure(1)
+line = ax.plot(x, all_linear_outputs_array)
+ax.legend(line, all_phome)
+plt.show()
+#
+decode_phome = list(set(batch_beam_decode[0]))
+# print("decode phome:　" + str(decode_phome))
+decode_phome.sort()
+# print("decode phome:　" + str(decode_phome))
+decode_linear_outputs_array = [linear_outputs_array[i][:] for i in decode_phome]
+decode_linear_outputs_array = transpose_dimension(decode_linear_outputs_array)
+print("decode_linear_outputs_array length:　" + str(len(decode_linear_outputs_array)))
+# draw picture
+plt.figure(2)
+ax = plt.subplot(111)
+x = np.linspace(0, n_steps, n_steps)
+plt.figure(2)
+line = ax.plot(x, decode_linear_outputs_array)
+ax.legend(line, decode_phome)
+plt.show()
+
+# show the result by picture.
+# linear_outputs_array = transpose_dimension(batch_linear_outputs[0])
 label_phome = list(set(batch_y[1]))
 # print("label phome:　" + str(label_phome))
 label_phome.sort()
@@ -138,10 +165,10 @@ label_linear_outputs_array = [linear_outputs_array[i][:] for i in label_phome]
 label_linear_outputs_array = transpose_dimension(label_linear_outputs_array)
 print("label_linear_outputs_array length:　" + str(len(label_linear_outputs_array)))
 # draw picture
-plt.figure(1)
+plt.figure(3)
 ax = plt.subplot(111)
 x = np.linspace(0, n_steps, n_steps)
-plt.figure(1)
+plt.figure(3)
 line = ax.plot(x, label_linear_outputs_array)
 ax.legend(line, label_phome)
 plt.show()
