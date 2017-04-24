@@ -80,7 +80,8 @@ n_layers = 2 # num of hidden layers
 
 # tf Graph input
 x = tf.placeholder("float32", [batch_size, n_steps, n_input])
-y = tf.placeholder("int32", [batch_size, n_steps - truncated_step, n_classes])
+# y = tf.placeholder("int32", [batch_size, n_steps - truncated_step, n_classes])
+y = tf.placeholder("int32", [batch_size, n_steps, n_classes])
 
 with tf.variable_scope("LSTM") as vs:
     # Define parameters of full connection between the second LSTM layer and output layer.
@@ -211,7 +212,8 @@ with tf.variable_scope("LSTM") as vs:
                     # trunk_x is a tensor of shape (n_steps, n_inputs)
                     trunk_x = training_data_file['source/' + trunk_name.strip('\n')]
                     # trunk_y is a tensor of shape (n_steps - truncated_step, n_classes)
-                    trunk_y = training_data_file['target/' + trunk_name.strip('\n')][truncated_step:][:]
+                    # trunk_y = training_data_file['target/' + trunk_name.strip('\n')][truncated_step:][:]
+                    trunk_y = training_data_file['target/' + trunk_name.strip('\n')]
                     # Add current trunk into the batch.
                     batch_x.append(trunk_x)
                     # trunk_y, _ = pad_sequences(trunk_y, n_classes)
