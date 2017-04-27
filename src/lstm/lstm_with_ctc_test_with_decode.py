@@ -249,7 +249,7 @@ with tf.variable_scope("LSTM") as vs:
                 logging.debug("Batch beam ler= {:.6f}".format(batch_beam_ler))
                 logging.debug("Batch greddy ler= {:.6f}".format(batch_greedy_ler))
                 trunk += 1
-                # if trunk >=2:
-                #     break;
+                if trunk >=2:
+                    break;
             # break;
         logging.info("Testing Finished!")
