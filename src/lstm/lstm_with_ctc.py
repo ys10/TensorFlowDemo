@@ -6,7 +6,7 @@ Project: https://github.com/ys10/TensorFlowDemo
 
 from __future__ import print_function
 
-import time, os
+import time, os, random
 import configparser
 import logging
 import tensorflow as tf
@@ -44,14 +44,22 @@ console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
 
 # Import data set
-# Name of file storing trunk names.
-trunk_names_file_name = cp.get('data', 'trunk_names_file_name')
+# Name of file storing training names.
+training_names_file_name = cp.get('data', 'training_names_file_name')
 # Name of HDF5 file as training data set.
 training_data_file_name = cp.get('data', 'training_data_file_name')
-# Read trunk names.
-trunk_names_file = open(trunk_names_file_name, 'r')
+# Read training names.
+training_names_file = open(training_names_file_name, 'r')
 # Read training data set.
 training_data_file = h5py.File(training_data_file_name, 'r')
+# Name of file storing validation names.
+validation_names_file_name = cp.get('data', 'validation_names_file_name')
+# Name of HDF5 file as validation data set.
+validation_data_file_name = cp.get('data', 'validation_data_file_name')
+# Read validation names.
+validation_names_file = open(validation_names_file_name, 'r')
+# Read validation data set.
+validation_data_file = h5py.File(validation_data_file_name, 'r')
 
 '''
 To classify vector using a recurrent neural network,
@@ -190,8 +198,10 @@ with tf.variable_scope("LSTM") as vs:
         logging.info("Model restored from file: " + saved_model_path)
         # Keep training until reach max epoch
         logging.info("Start training!")
-        # Read all trunk names.
-        all_trunk_names = trunk_names_file.readlines()
+        # Read all training trunk names.
+        all_training_trunk_names = training_names_file.readlines()
+        # Read all validation trunk names.
+        all_validation_trunk_names = validation_names_file.readlines()
         for epoch in range(start_epoch, training_epoch, 1):
             if epoch >= 15:
                 learning_rate *= 0.95
@@ -201,15 +211,18 @@ with tf.variable_scope("LSTM") as vs:
             logging.debug("epoch:" + str(epoch))
             logging.debug("learning_rate: "+ str(learning_rate))
             # Break out of the training epoch while there is no trunk usable.
-            if not all_trunk_names:
+            if not all_training_trunk_names:
                 break
-            logging.debug("number of trunks:"+str(len(all_trunk_names)))
+            # Shuffle the trunk name list.
+            all_training_trunk_names = random.shuffle(all_training_trunk_names)
+            # TODO
+            logging.debug("number of trunks:"+str(len(all_training_trunk_names)))
             # Calculate how many batches can the data set be divided into.
-            n_batches = math.floor(len(all_trunk_names)/batch_size)
-            # n_batches = math.ceil(len(all_trunk_names) / batch_size)
-            logging.debug("n_batches:" + str(n_batches))
+            training_batches = math.floor(len(all_training_trunk_names)/batch_size)
+            # training_batches = math.ceil(len(all_training_trunk_names) / batch_size)
+            logging.debug("training_batches:" + str(training_batches))
             # Train the RNN(LSTM) model by batch.
-            for batch in range(0, n_batches, 1):
+            for batch in range(0, training_batches, 1):
                 # For each batch.
                 # Define two variables to store input data.
                 batch_x = []
@@ -227,14 +240,14 @@ with tf.variable_scope("LSTM") as vs:
                     # The above fact is equivalent to the fact
                     #   that there is at least a trunk
                     #   whose index is no less than the number of all trunks.
-                    if(trunk_name_index >= len(all_trunk_names)):
+                    if(trunk_name_index >= len(all_training_trunk_names)):
                         # So some used trunks should be add to the last batch when the "fact" happened.
                         # Select the last trunk to be added into the last batch.
-                        trunk_name_index = len(all_trunk_names)-1
-                        logging.info("trunk_name_index >= len(all_trunk_names), trunk_name_index is:"+ str(trunk_name_index)+"len(all_trunk_names):"+str(len(all_trunk_names)))
+                        trunk_name_index = len(all_training_trunk_names)-1
+                        logging.info("trunk_name_index >= len(all_training_trunk_names), trunk_name_index is:"+ str(trunk_name_index)+"len(all_training_trunk_names):"+str(len(all_training_trunk_names)))
                     # Get trunk name from all trunk names by trunk name index.
-                    # trunk_name = all_trunk_names[trunk_name_index].split()[0]
-                    trunk_name = all_trunk_names[trunk_name_index].strip('\n')
+                    # trunk_name = all_training_trunk_names[trunk_name_index].split()[0]
+                    trunk_name = all_training_trunk_names[trunk_name_index].strip('\n')
                     logging.debug("trunk_name: " + trunk_name)
                     # Get trunk data by trunk name without line break character.
                     # sentence_x is a tensor of shape (n_steps, n_inputs)
@@ -284,13 +297,16 @@ with tf.variable_scope("LSTM") as vs:
                     logging.debug("greddy decode:" + str(batch_greedy_decode))
                 # break;
             # Metrics mean
-            train_cost /= (batch_size * n_batches)
-            train_beam_ler /= (batch_size * n_batches)
-            train_greedy_ler /= (batch_size * n_batches)
+            train_cost /= (batch_size * training_batches)
+            train_beam_ler /= (batch_size * training_batches)
+            train_greedy_ler /= (batch_size * training_batches)
             log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
             # Save session by epoch.
             if epoch % save_batch ==0:
                 saver.save(sess, to_save_model_path, global_step=epoch);
                 logging.info("Model saved successfully to: " + to_save_model_path)
+            # Validation
+
+            # TODO
         logging.info("Optimization Finished!")
