@@ -79,6 +79,10 @@ start_epoch = 30
 keep_prob = 1.0
 
 # Network Parameters
+# n_input = 69 # data input
+# n_steps = 200 # time steps
+# n_classes = 49 # total classes
+
 n_input = 69 # data input
 n_steps = 777 # time steps
 n_classes = 50 # total classes
@@ -213,7 +217,7 @@ with tf.variable_scope("LSTM") as vs:
             if not all_training_trunk_names:
                 break
             # Shuffle the trunk name list.
-            all_training_trunk_names = random.shuffle(all_training_trunk_names)
+            random.shuffle(all_training_trunk_names)
             logging.debug("number of trunks:"+str(len(all_training_trunk_names)))
             # Calculate how many batches can the data set be divided into.
             training_batches = math.floor(len(all_training_trunk_names)/batch_size)
