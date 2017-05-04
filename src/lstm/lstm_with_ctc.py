@@ -188,7 +188,6 @@ with tf.variable_scope("LSTM") as vs:
     saved_model_path = cp.get('model', 'saved_model_path')
     to_save_model_path = cp.get('model', 'to_save_model_path')
 
-
     # Launch the graph
     with tf.Session(config=config) as sess:
         # Initializing the variables
@@ -215,7 +214,6 @@ with tf.variable_scope("LSTM") as vs:
                 break
             # Shuffle the trunk name list.
             all_training_trunk_names = random.shuffle(all_training_trunk_names)
-            # TODO
             logging.debug("number of trunks:"+str(len(all_training_trunk_names)))
             # Calculate how many batches can the data set be divided into.
             training_batches = math.floor(len(all_training_trunk_names)/batch_size)
@@ -257,7 +255,6 @@ with tf.variable_scope("LSTM") as vs:
                     sentence_y = training_data_file['target/' + trunk_name]
                     # sentence_len is a tensor of shape (None)
                     sentence_len = training_data_file['size/' + trunk_name].value
-
                     # print(sentence_y.value)
                     # Add current trunk into the batch.
                     batch_x.append(sentence_x)
@@ -307,6 +304,91 @@ with tf.variable_scope("LSTM") as vs:
                 saver.save(sess, to_save_model_path, global_step=epoch);
                 logging.info("Model saved successfully to: " + to_save_model_path)
             # Validation
-
+            logging.debug("Validation starting!")
+            logging.debug("Number of validation trunks:"+str(len(all_validation_trunk_names)))
+            # Calculate how many batches can the data set be divided into.
+            validation_batches = math.floor(len(all_validation_trunk_names)/batch_size)
+            # training_batches = math.ceil(len(all_training_trunk_names) / batch_size)
+            logging.debug("Validation_batches:" + str(validation_batches))
+            # set validation parameters.
+            validation_cost = validation_greedy_ler = validation_beam_ler = 0
+            for batch in range(0, validation_batches, 1):
+                # For each batch.
+                # Define two variables to store input data.
+                batch_x = []
+                batch_y = []
+                batch_seq_len = []
+                for trunk in range(0, batch_size, 1):
+                    # For each trunk in the batch.
+                    # Calculate the index of current trunk in the whole data set.
+                    trunk_name_index = batch * batch_size + trunk
+                    logging.debug("trunk_name_index: " + str(trunk_name_index))
+                    # There is a fact that if the number of all trunks
+                    #   can not be divisible by batch size,
+                    #   then the last batch can not get enough trunks of batch size.
+                    # The above fact is equivalent to the fact
+                    #   that there is at least a trunk
+                    #   whose index is no less than the number of all trunks.
+                    if (trunk_name_index >= len(all_validation_trunk_names)):
+                        # So some used trunks should be add to the last batch when the "fact" happened.
+                        # Select the last trunk to be added into the last batch.
+                        trunk_name_index = len(all_validation_trunk_names) - 1
+                        logging.info("trunk_name_index >= len(all_validation_trunk_names), trunk_name_index is:" + str(
+                            trunk_name_index) + "len(all_validation_trunk_names):" + str(len(all_validation_trunk_names)))
+                    # Get trunk name from all trunk names by trunk name index.
+                    # trunk_name = all_training_trunk_names[trunk_name_index].split()[0]
+                    trunk_name = all_validation_trunk_names[trunk_name_index].strip('\n')
+                    logging.debug("trunk_name: " + trunk_name)
+                    # Get trunk data by trunk name without line break character.
+                    # sentence_x is a tensor of shape (n_steps, n_inputs)
+                    sentence_x = validation_data_file['source/' + trunk_name]
+                    # sentence_y is a tensor of shape (None)
+                    # sentence_y = training_data_file['target/' + trunk_name.strip('\n')].value
+                    sentence_y = validation_data_file['target/' + trunk_name]
+                    # sentence_len is a tensor of shape (None)
+                    sentence_len = validation_data_file['size/' + trunk_name].value
+                    # print(sentence_y.value)
+                    # Add current trunk into the batch.
+                    batch_x.append(sentence_x)
+                    # sentence_y, _ = pad_sequences([sentence_y], maxlen=n_classes)
+                    batch_y.append(sentence_y)
+                    batch_seq_len.append(sentence_len)
+                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps, padding='pre')
+                batch_y = sparse_tuple_from(batch_y)
+                feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
+                # Train with validation set.
+                # batch_cost, _ = sess.run([cost, optimizer], feed_dict)
+                # Train without validation set.
+                batch_cost, _ = sess.run(cost, feed_dict)
+                validation_cost += batch_cost * batch_size
+                # ler
+                batch_greedy_ler = sess.run(greedy_ler, feed_dict)
+                validation_greedy_ler += batch_greedy_ler * batch_size
+                #
+                batch_beam_ler = sess.run(beam_ler, feed_dict)
+                validation_beam_ler += batch_beam_ler * batch_size
+                # decode
+                batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
+                batch_beam_decode = sess.run(beam_decoded, feed_dict)
+                # Print accuracy by display_batch.
+                if batch % display_batch == 0:
+                    # Calculate batch accuracy.
+                    # acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
+                    # Calculate batch loss.
+                    logging.debug("batch_y: " + str(batch_y))
+                    loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
+                    logging.debug("epoch:" + str(epoch) + ",Batch:" + str(batch) + ", Batch Loss= {:.6f}".format(loss)
+                                  + ", Batch beam ler= {:.6f}".format(
+                        batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
+                    logging.debug("beam decode:" + str(batch_beam_decode))
+                    logging.debug("greddy decode:" + str(batch_greedy_decode))
+                    # break;
+            # Metrics mean
+            validation_cost /= (batch_size * validation_batches)
+            validation_beam_ler /= (batch_size * validation_batches)
+            validation_greedy_ler /= (batch_size * validation_batches)
+            log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
+            logging.info(log.format(epoch + 1, training_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
             # TODO
+            logging.debug("Validation end.")
         logging.info("Optimization Finished!")
