@@ -81,7 +81,7 @@ keep_prob = 1.0
 # Network Parameters
 n_input = 69 # data input
 n_steps = 777 # time steps
-n_classes = 49 # total classes
+n_classes = 50 # total classes
 
 # n_input = 36 # data input
 # n_steps = 1496 # time steps

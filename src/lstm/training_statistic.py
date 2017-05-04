@@ -37,7 +37,7 @@ trunk_names_file = open(trunk_names_file_name, 'r')
 # Read training data set.
 test_data_file = h5py.File(data_file_name, 'r')
 
-n_classes = 47 # total classes
+n_classes = 50 # total classes
 
 y = tf.sparse_placeholder(tf.int32, [None])
 
