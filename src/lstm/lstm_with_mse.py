@@ -67,8 +67,11 @@ keep_prob = 1.0
 truncated_step = 100
 
 # Network Parameters
+# n_input = 69 # data input
+# n_steps = 777 # time steps
+# n_classes = 50 # total classes
 n_input = 69 # data input
-n_steps = 777 # time steps
+n_steps = 200 # time steps
 n_classes = 50 # total classes
 
 # n_input = 36 # data input
@@ -231,7 +234,7 @@ with tf.variable_scope("LSTM") as vs:
                     logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
                           + ", Batch Loss= {:.6f}".format(loss)
                           + ", Training Accuracy= {:.5f}".format(acc))
-                # break;
+                break;
             # Save session by iteration.
             saver.save(sess, to_save_model_path, global_step=iter);
             logging.info("Model saved successfully to: " + to_save_model_path)

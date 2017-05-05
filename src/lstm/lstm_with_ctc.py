@@ -197,7 +197,7 @@ with tf.variable_scope("LSTM") as vs:
         # Initializing the variables
         init = tf.global_variables_initializer()
         sess.run(init)
-        saver.restore(sess, saved_model_path)
+        # saver.restore(sess, saved_model_path)
         logging.info("Model restored from file: " + saved_model_path)
         # Keep training until reach max epoch
         logging.info("Start training!")
@@ -265,9 +265,6 @@ with tf.variable_scope("LSTM") as vs:
                     # sentence_y, _ = pad_sequences([sentence_y], maxlen=n_classes)
                     batch_y.append(sentence_y)
                     batch_seq_len.append(sentence_len)
-                #     break
-                # break
-                    # batch_seq_len.append(sentence_len)
                 batch_x, _ = pad_sequences(batch_x, maxlen=n_steps, padding='pre')
                 batch_y = sparse_tuple_from(batch_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
@@ -357,13 +354,13 @@ with tf.variable_scope("LSTM") as vs:
                     # sentence_y, _ = pad_sequences([sentence_y], maxlen=n_classes)
                     batch_y.append(sentence_y)
                     batch_seq_len.append(sentence_len)
-                batch_x, _ = pad_sequences(batch_x, maxlen=n_steps, padding='pre')
+                batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps, padding='pre')
                 batch_y = sparse_tuple_from(batch_y)
                 feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
                 # Train with validation set.
                 # batch_cost, _ = sess.run([cost, optimizer], feed_dict)
                 # Train without validation set.
-                batch_cost, _ = sess.run(cost, feed_dict)
+                batch_cost = sess.run(cost, feed_dict)
                 validation_cost += batch_cost * batch_size
                 # ler
                 batch_greedy_ler = sess.run(greedy_ler, feed_dict)
@@ -386,7 +383,7 @@ with tf.variable_scope("LSTM") as vs:
                         batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
                     logging.debug("beam decode:" + str(batch_beam_decode))
                     logging.debug("greddy decode:" + str(batch_greedy_decode))
-                    # break;
+                # break;
             # Metrics mean
             validation_cost /= (batch_size * validation_batches)
             validation_beam_ler /= (batch_size * validation_batches)
@@ -395,4 +392,5 @@ with tf.variable_scope("LSTM") as vs:
             logging.info(log.format(epoch + 1, training_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
             # TODO
             logging.debug("Validation end.")
+            # break;
         logging.info("Optimization Finished!")
