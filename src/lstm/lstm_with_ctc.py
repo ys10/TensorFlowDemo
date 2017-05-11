@@ -73,7 +73,7 @@ batch_size = 16
 display_batch = 1
 save_batch = 10
 training_epoch = 500
-start_epoch = 30
+start_epoch = 0
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
 keep_prob = 1.0
@@ -206,8 +206,8 @@ with tf.variable_scope("LSTM") as vs:
         # Read all validation trunk names.
         all_validation_trunk_names = validation_names_file.readlines()
         for epoch in range(start_epoch, training_epoch, 1):
-            if epoch >= 15:
-                learning_rate *= 0.95
+            # if epoch >= 15:
+            #     learning_rate *= 0.95
             train_cost = train_greedy_ler = train_beam_ler = 0
             start = time.time()
             # For each epoch.
