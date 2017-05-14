@@ -60,6 +60,8 @@ validation_data_file_name = cp.get('data', 'validation_data_file_name')
 validation_names_file = open(validation_names_file_name, 'r')
 # Read validation data set.
 validation_data_file = h5py.File(validation_data_file_name, 'r')
+# Write summary to directory
+summary_dir = cp.get('summary', 'summary_dir')
 
 '''
 To classify vector using a recurrent neural network,
@@ -205,6 +207,25 @@ with tf.variable_scope("LSTM") as vs:
         all_training_trunk_names = training_names_file.readlines()
         # Read all validation trunk names.
         all_validation_trunk_names = validation_names_file.readlines()
+        #
+        train_cost = train_beam_ler = train_greedy_ler = 0
+        validation_cost = validation_beam_ler = validation_greedy_ler = 0
+        # Summary
+        scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
+        scalar_train_cost = tf.summary.scalar('train_cost', train_cost)
+        scalar_train_beam_ler = tf.summary.scalar('train_beam_ler', train_beam_ler)
+        scalar_train_greedy_ler = tf.summary.scalar('train_greedy_ler', train_greedy_ler)
+        scalar_validation_cost = tf.summary.scalar('validation_cost', validation_cost)
+        scalar_validation_beam_ler = tf.summary.scalar('validation_beam_ler', validation_beam_ler)
+        scalar_validation_greedy_ler = tf.summary.scalar('validation_greedy_ler', validation_greedy_ler)
+        # Merge all summaries.
+        train_scalar_list = [scalar_learning_rate, scalar_train_cost, scalar_train_beam_ler, scalar_train_greedy_ler]
+        validation_scalar_list = [scalar_validation_cost, scalar_validation_beam_ler, scalar_validation_greedy_ler]
+        train_merged = tf.summary.merge(train_scalar_list)
+        validation_merged = tf.summary.merge(validation_scalar_list)
+        # Write to directory.
+        writer = tf.summary.FileWriter(summary_dir)
+        # Train
         for epoch in range(start_epoch, training_epoch, 1):
             # if epoch >= 15:
             #     learning_rate *= 0.95
@@ -293,13 +314,15 @@ with tf.variable_scope("LSTM") as vs:
                                   + ", Batch beam ler= {:.6f}".format(batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
                     logging.debug("beam decode:" + str(batch_beam_decode))
                     logging.debug("greddy decode:" + str(batch_greedy_decode))
-                # break;
+                break;
             # Metrics mean
             train_cost /= (batch_size * training_batches)
             train_beam_ler /= (batch_size * training_batches)
             train_greedy_ler /= (batch_size * training_batches)
             log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
+            # TODO
+            train_summary = sess.run(train_merged)
             # Save session by epoch.
             if epoch % save_batch ==0:
                 saver.save(sess, to_save_model_path, global_step=epoch);
@@ -383,7 +406,7 @@ with tf.variable_scope("LSTM") as vs:
                         batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
                     logging.debug("beam decode:" + str(batch_beam_decode))
                     logging.debug("greddy decode:" + str(batch_greedy_decode))
-                # break;
+                break;
             # Metrics mean
             validation_cost /= (batch_size * validation_batches)
             validation_beam_ler /= (batch_size * validation_batches)
@@ -391,6 +414,10 @@ with tf.variable_scope("LSTM") as vs:
             log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(epoch + 1, training_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
             # TODO
+            validation_summary = sess.run(validation_merged)
             logging.debug("Validation end.")
+            # Merge summaries.
+            writer.add_summary(train_summary, global_step=epoch)
+            writer.add_summary(validation_summary, global_step=epoch)
             # break;
         logging.info("Optimization Finished!")
