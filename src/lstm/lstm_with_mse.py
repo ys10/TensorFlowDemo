@@ -67,12 +67,12 @@ keep_prob = 1.0
 truncated_step = 100
 
 # Network Parameters
-# n_input = 69 # data input
-# n_steps = 777 # time steps
-# n_classes = 50 # total classes
 n_input = 69 # data input
-n_steps = 200 # time steps
+n_steps = 777 # time steps
 n_classes = 50 # total classes
+# n_input = 69 # data input
+# n_steps = 200 # time steps
+# n_classes = 50 # total classes
 
 # n_input = 36 # data input
 # n_steps = 200 # time steps
@@ -223,6 +223,8 @@ with tf.variable_scope("LSTM") as vs:
                     batch_y.append(trunk_y)
                 # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
+                batch_x, batch_seq_len = pad_sequences(batch_x, maxlen=n_steps, padding='pre')
+                batch_y = sparse_tuple_from(batch_y)
                 # Run optimization operation (Back-propagation Through Time)
                 sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
                 # Print accuracy by display_batch.

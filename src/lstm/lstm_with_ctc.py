@@ -74,7 +74,7 @@ learning_rate = 0.0000001
 batch_size = 16
 display_batch = 1
 save_batch = 10
-training_epoch = 500
+training_epoch = 5
 start_epoch = 0
 # For dropout to prevent over-fitting.
 # Neural network will not work with a probability of 1-keep_prob.
@@ -211,18 +211,20 @@ with tf.variable_scope("LSTM") as vs:
         train_cost = train_beam_ler = train_greedy_ler = 0
         validation_cost = validation_beam_ler = validation_greedy_ler = 0
         # Summary
-        scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
-        scalar_train_cost = tf.summary.scalar('train_cost', train_cost)
-        scalar_train_beam_ler = tf.summary.scalar('train_beam_ler', train_beam_ler)
-        scalar_train_greedy_ler = tf.summary.scalar('train_greedy_ler', train_greedy_ler)
-        scalar_validation_cost = tf.summary.scalar('validation_cost', validation_cost)
-        scalar_validation_beam_ler = tf.summary.scalar('validation_beam_ler', validation_beam_ler)
-        scalar_validation_greedy_ler = tf.summary.scalar('validation_greedy_ler', validation_greedy_ler)
+        # scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
+        # scalar_train_cost = tf.summary.scalar('train_cost', train_cost)
+        scalar_batch_cost = tf.summary.scalar('batch_cost', cost)
+        # scalar_train_beam_ler = tf.summary.scalar('train_beam_ler', train_beam_ler)
+        # scalar_train_greedy_ler = tf.summary.scalar('train_greedy_ler', train_greedy_ler)
+        # scalar_validation_cost = tf.summary.scalar('validation_cost', validation_cost)
+        # scalar_validation_beam_ler = tf.summary.scalar('validation_beam_ler', validation_beam_ler)
+        # scalar_validation_greedy_ler = tf.summary.scalar('validation_greedy_ler', validation_greedy_ler)
         # Merge all summaries.
-        train_scalar_list = [scalar_learning_rate, scalar_train_cost, scalar_train_beam_ler, scalar_train_greedy_ler]
-        validation_scalar_list = [scalar_validation_cost, scalar_validation_beam_ler, scalar_validation_greedy_ler]
+        train_scalar_list = [scalar_batch_cost]
+        # train_scalar_list = [scalar_learning_rate, scalar_train_cost, scalar_train_beam_ler, scalar_train_greedy_ler]
+        # validation_scalar_list = [scalar_validation_cost, scalar_validation_beam_ler, scalar_validation_greedy_ler]
         train_merged = tf.summary.merge(train_scalar_list)
-        validation_merged = tf.summary.merge(validation_scalar_list)
+        # validation_merged = tf.summary.merge(validation_scalar_list)
         # Write to directory.
         writer = tf.summary.FileWriter(summary_dir)
         # Train
@@ -303,6 +305,9 @@ with tf.variable_scope("LSTM") as vs:
                 # decode
                 batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
                 batch_beam_decode = sess.run(beam_decoded, feed_dict)
+                #
+                train_summary = sess.run(train_merged, feed_dict)
+                writer.add_summary(train_summary, global_step=epoch)
                 # Print accuracy by display_batch.
                 if batch % display_batch == 0:
                     # Calculate batch accuracy.
@@ -322,7 +327,7 @@ with tf.variable_scope("LSTM") as vs:
             log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
             # TODO
-            train_summary = sess.run(train_merged)
+
             # Save session by epoch.
             if epoch % save_batch ==0:
                 saver.save(sess, to_save_model_path, global_step=epoch);
@@ -414,10 +419,9 @@ with tf.variable_scope("LSTM") as vs:
             log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(epoch + 1, training_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
             # TODO
-            validation_summary = sess.run(validation_merged)
+            # validation_summary = sess.run(validation_merged)
             logging.debug("Validation end.")
             # Merge summaries.
-            writer.add_summary(train_summary, global_step=epoch)
-            writer.add_summary(validation_summary, global_step=epoch)
+            # writer.add_summary(validation_summary, global_step=epoch)
             # break;
         logging.info("Optimization Finished!")
