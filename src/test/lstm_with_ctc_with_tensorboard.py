@@ -167,8 +167,8 @@ with tf.variable_scope("LSTM") as vs:
 
     # Define loss and optimizer.
     cost = tf.reduce_mean( ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
-    # optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Evaluate
     # correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
@@ -207,6 +207,29 @@ with tf.variable_scope("LSTM") as vs:
         all_training_trunk_names = training_names_file.readlines()
         # Read all validation trunk names.
         all_validation_trunk_names = validation_names_file.readlines()
+        #
+        # train_cost = train_beam_ler = train_greedy_ler = 0
+        # validation_cost = validation_beam_ler = validation_greedy_ler = 0
+        # Summary
+        # scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
+        # scalar_train_cost = tf.summary.scalar('train_cost', train_cost)
+        scalar_batch_cost = tf.summary.scalar('batch_cost', cost)
+        scalar_train_beam_ler = tf.summary.scalar('batch_beam_ler', beam_ler)
+        scalar_train_greedy_ler = tf.summary.scalar('batch_greedy_ler', greedy_ler)
+
+        # scalar_train_beam_ler = tf.summary.scalar('train_beam_ler', train_beam_ler)
+        # scalar_train_greedy_ler = tf.summary.scalar('train_greedy_ler', train_greedy_ler)
+        # scalar_validation_cost = tf.summary.scalar('validation_cost', validation_cost)
+        # scalar_validation_beam_ler = tf.summary.scalar('validation_beam_ler', validation_beam_ler)
+        # scalar_validation_greedy_ler = tf.summary.scalar('validation_greedy_ler', validation_greedy_ler)
+        # Merge all summaries.
+        # train_scalar_list = [scalar_batch_cost]
+        # train_scalar_list = [scalar_learning_rate, scalar_train_cost, scalar_train_beam_ler, scalar_train_greedy_ler]
+        # validation_scalar_list = [scalar_validation_cost, scalar_validation_beam_ler, scalar_validation_greedy_ler]
+        train_merged = tf.summary.merge_all()
+        # validation_merged = tf.summary.merge(validation_scalar_list)
+        # Write to directory.
+        writer = tf.summary.FileWriter(summary_dir)
         # Train
         for epoch in range(start_epoch, training_epoch, 1):
             # if epoch >= 15:
@@ -274,9 +297,9 @@ with tf.variable_scope("LSTM") as vs:
                 # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
                 # Run optimization operation (Back-propagation Through Time)
                 feed_dict = {x: batch_x, y: batch_y, seq_len: batch_seq_len}
-                # train_summary, _, batch_greedy_decode, batch_beam_decode = sess.run([train_merged, optimizer, greedy_decoded, beam_decoded], feed_dict)
-                batch_cost, _, batch_greedy_ler, batch_beam_ler, batch_greedy_decode, batch_beam_decode\
-                    = sess.run([cost, optimizer, greedy_ler, beam_ler, greedy_decoded, beam_decoded], feed_dict)
+                train_summary, _, batch_greedy_decode, batch_beam_decode = sess.run([train_merged, optimizer, greedy_decoded, beam_decoded], feed_dict)
+                # batch_cost, _, batch_greedy_ler, batch_beam_ler \
+                #     = sess.run([cost, optimizer, greedy_ler, beam_ler, greedy_decoded, beam_decoded], feed_dict)
                 train_cost += batch_cost * batch_size
                 # ler
                 # batch_greedy_ler = sess.run(greedy_ler, feed_dict)
@@ -288,6 +311,8 @@ with tf.variable_scope("LSTM") as vs:
                 # batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
                 # batch_beam_decode = sess.run(beam_decoded, feed_dict)
                 #
+                # train_summary = sess.run(train_merged, feed_dict)
+                writer.add_summary(train_summary, global_step=epoch)
                 # Print accuracy by display_batch.
                 if batch % display_batch == 0:
                     # Calculate batch accuracy.
@@ -397,6 +422,10 @@ with tf.variable_scope("LSTM") as vs:
             validation_greedy_ler /= (batch_size * validation_batches)
             log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
             logging.info(log.format(epoch + 1, training_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
+            # TODO
+            # validation_summary = sess.run(validation_merged)
             logging.debug("Validation end.")
+            # Merge summaries.
+            # writer.add_summary(validation_summary, global_step=epoch)
             # break;
         logging.info("Optimization Finished!")
