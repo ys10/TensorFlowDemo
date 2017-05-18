@@ -60,8 +60,6 @@ validation_data_file_name = cp.get('data', 'validation_data_file_name')
 validation_names_file = open(validation_names_file_name, 'r')
 # Read validation data set.
 validation_data_file = h5py.File(validation_data_file_name, 'r')
-# Write summary to directory
-summary_dir = cp.get('summary', 'summary_dir')
 
 '''
 To classify vector using a recurrent neural network,
