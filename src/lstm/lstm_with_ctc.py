@@ -297,7 +297,7 @@ with tf.variable_scope("LSTM") as vs:
                                   + ", Batch beam ler= {:.6f}".format(batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
                     logging.debug("beam decode:" + str(batch_beam_decode))
                     logging.debug("greddy decode:" + str(batch_greedy_decode))
-                break;
+                # break;
             # Metrics mean
             train_cost /= (batch_size * training_batches)
             train_beam_ler /= (batch_size * training_batches)
@@ -388,7 +388,7 @@ with tf.variable_scope("LSTM") as vs:
                         batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
                     logging.debug("beam decode:" + str(batch_beam_decode))
                     logging.debug("greddy decode:" + str(batch_greedy_decode))
-                break;
+                # break;
             # Metrics mean
             validation_cost /= (batch_size * validation_batches)
             validation_beam_ler /= (batch_size * validation_batches)
