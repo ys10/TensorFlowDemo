@@ -207,8 +207,10 @@ with tf.variable_scope("LSTM") as vs:
         all_validation_trunk_names = validation_names_file.readlines()
         # Train
         for epoch in range(start_epoch, training_epoch, 1):
-            if epoch - start_epoch >= 15:
+            if (epoch - start_epoch) % 30 >= 15:
                 learning_rate *= 0.95
+            else:
+                learning_rate = 0.0000001
             train_cost = train_greedy_ler = train_beam_ler = 0
             start = time.time()
             # For each epoch.
