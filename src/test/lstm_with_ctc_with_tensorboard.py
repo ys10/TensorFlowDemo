@@ -71,15 +71,19 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
 with tf.name_scope('parameter'):
-    learning_rate = 0.0000001
+    training_epoch = 5
+    start_epoch = 0
+    learning_rate_adjust_epoch = 30
+    init_learning_rate = 0.001
+    rate_of_decline = 0.95
+    learning_rate = init_learning_rate
     scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
 
 with tf.name_scope('data'):
     batch_size = 16
     display_batch = 1
     save_batch = 10
-    training_epoch = 5
-    start_epoch = 0
+
 
 with tf.name_scope('dropout'):
     # For dropout to prevent over-fitting.
@@ -131,34 +135,9 @@ with tf.variable_scope("LSTM") as vs:
 
 # Define LSTM as a RNN.
 def RNN(x, seq_len, weights, biases):
-
-    # Prepare data shape to match `rnn` function requirements
-    # Current data input shape: (batch_size, n_steps, n_input)
-    # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
-
-    # Permuting batch_size and n_steps
-    # x = tf.transpose(x, [1, 0, 2])
-    # Reshaping to (n_steps*batch_size, n_input)
-    # x = tf.reshape(x, [-1, n_input])
-    # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-    # x = tf.split(x, n_steps, 0)
-
-    # # Define a lstm cell with tensorflow
-    # lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
-    # # Drop out in case of over-fitting.
-    # lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
-    # # Stack two same lstm cell
-    # cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
-
-    # Initialize the states of LSTM.
-    # cell.zero_state(batch_size, dtype = tf.float32)
-    # states = tf.zeros([batch_size, n_hidden * n_layers])
-    # states = cell.zero_state(batch_size, dtype=tf.float32)
-
     # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
     outputs, states = tf.nn.dynamic_rnn(stack, x, seq_len, dtype=tf.float32)
     # Permuting batch_size and n_steps.
-    # outputs = tf.transpose(outputs, [1, 0, 2])
     outputs = tf.reshape(outputs, [-1, n_hidden])
     # Now, shape of outputs is (batch_size, n_steps, n_input)
     # Linear activation, using rnn inner loop last output
@@ -177,7 +156,7 @@ with tf.name_scope("output"):
 with tf.name_scope("run"):
     # Define loss and optimizer.
     cost = tf.reduce_mean(ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+    optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate).minimize(cost)
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
     # (it's slower but you'll get better results)
     beam_decoded, _ = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
@@ -191,8 +170,7 @@ config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.8
 
 # Initialize the saver to save session.
-lstm_variables = [v for v in tf.global_variables()
-                    if v.name.startswith(vs.name)]
+lstm_variables = [v for v in tf.global_variables() if v.name.startswith(vs.name)]
 saver = tf.train.Saver(lstm_variables, max_to_keep=training_epoch)
 saved_model_path = cp.get('model', 'saved_model_path')
 to_save_model_path = cp.get('model', 'to_save_model_path')
@@ -205,8 +183,7 @@ with tf.name_scope('train'):
     scalar_train_batch_cost = tf.summary.scalar('train_batch_cost', train_batch_cost)
     scalar_train_batch_beam_ler = tf.summary.scalar('train_batch_beam_ler', train_batch_beam_ler)
     scalar_train_batch_greedy_ler = tf.summary.scalar('train_batch_greedy_ler', train_batch_greedy_ler)
-train_scalar_list = [scalar_learning_rate, scalar_train_batch_cost, scalar_train_batch_beam_ler,
-                     scalar_train_batch_greedy_ler]
+train_scalar_list = [scalar_learning_rate, scalar_train_batch_cost, scalar_train_batch_beam_ler, scalar_train_batch_greedy_ler]
 train_merged = tf.summary.merge(train_scalar_list)
 #
 with tf.name_scope('validation'):
@@ -218,6 +195,7 @@ with tf.name_scope('validation'):
     scalar_validation_batch_greedy_ler = tf.summary.scalar('validation_batch_greedy_ler', validation_batch_greedy_ler)
 validation_scalar_list = [scalar_validation_batch_cost, scalar_validation_batch_beam_ler, scalar_validation_batch_greedy_ler]
 validation_merged = tf.summary.merge(validation_scalar_list)
+
 # Write to directory.
 sess = tf.InteractiveSession(config=config)
 writer = tf.summary.FileWriter(summary_dir, sess.graph)
@@ -235,13 +213,14 @@ logging.info("Start training!")
 all_training_trunk_names = training_names_file.readlines()
 # Read all validation trunk names.
 all_validation_trunk_names = validation_names_file.readlines()
-#TODO
 # Train
 training_global_step = 0
 validation_global_step = 0
 for epoch in range(start_epoch, training_epoch, 1):
-    if epoch - start_epoch >= 15:
-        learning_rate *= 0.95
+    if (epoch - start_epoch) % learning_rate_adjust_epoch >= learning_rate_adjust_epoch/2:
+        learning_rate *= rate_of_decline
+    else:
+        learning_rate = init_learning_rate
     train_cost = train_greedy_ler = train_beam_ler = 0
     #
     start = time.time()
