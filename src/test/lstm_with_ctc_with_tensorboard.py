@@ -73,7 +73,7 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 with tf.name_scope('parameter'):
     training_epoch = 5
     start_epoch = 0
-    learning_rate_adjust_epoch = 30
+    learning_rate_adjust_epoch = 2
     init_learning_rate = 0.001
     rate_of_decline = 0.95
     learning_rate = init_learning_rate
