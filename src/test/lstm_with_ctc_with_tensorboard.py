@@ -70,7 +70,7 @@ Because trunk shape is 200*69,
 we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
-with tf.name_scope('train'):
+with tf.name_scope('parameter'):
     learning_rate = 0.0000001
     scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
 
@@ -237,6 +237,8 @@ all_training_trunk_names = training_names_file.readlines()
 all_validation_trunk_names = validation_names_file.readlines()
 #TODO
 # Train
+training_global_step = 0
+validation_global_step = 0
 for epoch in range(start_epoch, training_epoch, 1):
     if epoch - start_epoch >= 15:
         learning_rate *= 0.95
@@ -308,7 +310,8 @@ for epoch in range(start_epoch, training_epoch, 1):
         # train_batch_cost, train_step, train_batch_greedy_ler, train_batch_beam_ler, batch_greedy_decode, batch_beam_decode \
         #     = sess.run([cost, optimizer, greedy_ler, beam_ler, greedy_decoded, beam_decoded], feed_dict)
         train_summary, _, batch_greedy_decode, batch_beam_decode = sess.run([train_merged, optimizer, greedy_decoded, beam_decoded], feed_dict)
-        writer.add_summary(train_summary, epoch * training_batches + batch)
+        writer.add_summary(train_summary, training_global_step)
+        training_global_step += 1
         train_cost += train_batch_cost * batch_size
         # ler
         # batch_greedy_ler = sess.run(greedy_ler, feed_dict)
@@ -340,8 +343,8 @@ for epoch in range(start_epoch, training_epoch, 1):
     logging.debug("train_beam_ler:" + str(train_beam_ler))
     logging.debug("train_greedy_ler:" + str(train_greedy_ler))
 
-    log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
-    logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
+    # log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
+    # logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
     # TODO
     # Save session by epoch.
     if epoch % save_batch ==0:
@@ -428,17 +431,18 @@ for epoch in range(start_epoch, training_epoch, 1):
                 batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
             logging.debug("beam decode:" + str(batch_beam_decode))
             logging.debug("greddy decode:" + str(batch_greedy_decode))
-        # break;
+        break;
     # Metrics mean
     validation_cost /= (batch_size * validation_batches)
     validation_beam_ler /= (batch_size * validation_batches)
     validation_greedy_ler /= (batch_size * validation_batches)
     log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
     logging.info(log.format(epoch + 1, training_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
+    logging.debug("Validation end.")
     # TODO
     validation_summary = sess.run(validation_merged, feed_dict)
-    logging.debug("Validation end.")
     # Merge summaries.
-    writer.add_summary(validation_summary, global_step=epoch)
+    writer.add_summary(validation_summary, global_step=validation_global_step)
+    validation_global_step += 1
     # break;
 logging.info("Optimization Finished!")
