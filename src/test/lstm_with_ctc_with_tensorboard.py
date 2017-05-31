@@ -71,17 +71,35 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
 with tf.name_scope('parameter'):
-    training_epoch = 5
+    base_learning_rate = tf.Variable(0.0001, trainable=False)
+    learning_rate = base_learning_rate
     start_epoch = 0
-    learning_rate_adjust_epoch = 2
-    init_learning_rate = 0.001
-    rate_of_decline = 0.95
-    learning_rate = init_learning_rate
-    scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
+    end_epoch = 60
+    decay_epoch = 15
+    reset_epoch = 30
+    decay_rate = 0.95
+    current_epoch = tf.Variable(0, trainable=False)
+
+    def decay_learning_rate(current_epoch):
+        logging.debug("get_learning_rate() current epoch:" + str(current_epoch))
+        new_value = tf.train.exponential_decay(
+            base_learning_rate,
+            tf.mod(current_epoch, reset_epoch),
+            1,
+            decay_rate,
+            staircase=False,
+            name=None)
+        return new_value
+    decay_value = decay_learning_rate(current_epoch)
+    decay_learning_rate = tf.assign(learning_rate, decay_value)
+    reset_learning_rate = tf.assign(learning_rate, base_learning_rate)
+
+scalar_learning_rate = tf.summary.scalar('learning_rate', learning_rate)
+parameter_merged = tf.summary.merge([scalar_learning_rate])
 
 with tf.name_scope('data'):
     batch_size = 16
-    display_batch = 1
+    display_batch = 10
     save_batch = 10
 
 
@@ -156,7 +174,9 @@ with tf.name_scope("output"):
 with tf.name_scope("run"):
     # Define loss and optimizer.
     cost = tf.reduce_mean(ctc_ops.ctc_loss(labels = y, inputs = pred, sequence_length = seq_len, time_major=False))
-    optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate).minimize(cost)
+    # optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+    train_op = optimizer.minimize(cost)
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
     # (it's slower but you'll get better results)
     beam_decoded, _ = ctc_ops.ctc_beam_search_decoder(tf.transpose(pred, (1, 0, 2)), seq_len)
@@ -171,19 +191,23 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.8
 
 # Initialize the saver to save session.
 lstm_variables = [v for v in tf.global_variables() if v.name.startswith(vs.name)]
-saver = tf.train.Saver(lstm_variables, max_to_keep=training_epoch)
+saver = tf.train.Saver(lstm_variables, max_to_keep=end_epoch)
 saved_model_path = cp.get('model', 'saved_model_path')
 to_save_model_path = cp.get('model', 'to_save_model_path')
 
 # Summary
 with tf.name_scope('train'):
+    # train_learning_rate = optimizer._lr_t
+    # scalar_learning_rate = tf.summary.scalar('learning_rate', train_learning_rate)
+    # parameter_merged = tf.summary.merge([scalar_learning_rate])
+
     train_batch_cost = cost
     train_batch_beam_ler = beam_ler
     train_batch_greedy_ler = greedy_ler
     scalar_train_batch_cost = tf.summary.scalar('train_batch_cost', train_batch_cost)
     scalar_train_batch_beam_ler = tf.summary.scalar('train_batch_beam_ler', train_batch_beam_ler)
     scalar_train_batch_greedy_ler = tf.summary.scalar('train_batch_greedy_ler', train_batch_greedy_ler)
-train_scalar_list = [scalar_learning_rate, scalar_train_batch_cost, scalar_train_batch_beam_ler, scalar_train_batch_greedy_ler]
+train_scalar_list = [scalar_train_batch_cost, scalar_train_batch_beam_ler, scalar_train_batch_greedy_ler]
 train_merged = tf.summary.merge(train_scalar_list)
 #
 with tf.name_scope('validation'):
@@ -216,11 +240,14 @@ all_validation_trunk_names = validation_names_file.readlines()
 # Train
 training_global_step = 0
 validation_global_step = 0
-for epoch in range(start_epoch, training_epoch, 1):
-    if (epoch - start_epoch) % learning_rate_adjust_epoch >= learning_rate_adjust_epoch/2:
-        learning_rate *= rate_of_decline
+for epoch in range(start_epoch, end_epoch, 1):
+    if (epoch - start_epoch) % reset_epoch >= decay_epoch:
+        sess.run(decay_learning_rate, feed_dict={current_epoch: epoch})
     else:
-        learning_rate = init_learning_rate
+        sess.run(reset_learning_rate)
+    parameter_summary = sess.run(parameter_merged)
+    writer.add_summary(parameter_summary, training_global_step)
+    #
     train_cost = train_greedy_ler = train_beam_ler = 0
     #
     start = time.time()
@@ -288,7 +315,7 @@ for epoch in range(start_epoch, training_epoch, 1):
         # train_summary, _, batch_greedy_decode, batch_beam_decode = sess.run([train_merged, optimizer, greedy_decoded, beam_decoded], feed_dict)
         # train_batch_cost, train_step, train_batch_greedy_ler, train_batch_beam_ler, batch_greedy_decode, batch_beam_decode \
         #     = sess.run([cost, optimizer, greedy_ler, beam_ler, greedy_decoded, beam_decoded], feed_dict)
-        train_summary, _, batch_greedy_decode, batch_beam_decode = sess.run([train_merged, optimizer, greedy_decoded, beam_decoded], feed_dict)
+        train_summary, _, batch_greedy_decode, batch_beam_decode = sess.run([train_merged, train_op, greedy_decoded, beam_decoded], feed_dict)
         writer.add_summary(train_summary, training_global_step)
         training_global_step += 1
         train_cost += train_batch_cost * batch_size
@@ -323,7 +350,7 @@ for epoch in range(start_epoch, training_epoch, 1):
     logging.debug("train_greedy_ler:" + str(train_greedy_ler))
 
     # log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
-    # logging.info(log.format(epoch+1, training_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
+    # logging.info(log.format(epoch+1, end_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
     # TODO
     # Save session by epoch.
     if epoch % save_batch ==0:
@@ -360,12 +387,12 @@ for epoch in range(start_epoch, training_epoch, 1):
                 # So some used trunks should be add to the last batch when the "fact" happened.
                 # Select the last trunk to be added into the last batch.
                 trunk_name_index = len(all_validation_trunk_names) - 1
-                logging.info("trunk_name_index >= len(all_validation_trunk_names), trunk_name_index is:" + str(
-                    trunk_name_index) + "len(all_validation_trunk_names):" + str(len(all_validation_trunk_names)))
+                # logging.info("trunk_name_index >= len(all_validation_trunk_names), trunk_name_index is:" + str(
+                #     trunk_name_index) + "len(all_validation_trunk_names):" + str(len(all_validation_trunk_names)))
             # Get trunk name from all trunk names by trunk name index.
             # trunk_name = all_training_trunk_names[trunk_name_index].split()[0]
             trunk_name = all_validation_trunk_names[trunk_name_index].strip('\n')
-            logging.debug("trunk_name: " + trunk_name)
+            # logging.debug("trunk_name: " + trunk_name)
             # Get trunk data by trunk name without line break character.
             # sentence_x is a tensor of shape (n_steps, n_inputs)
             sentence_x = validation_data_file['source/' + trunk_name]
@@ -400,9 +427,6 @@ for epoch in range(start_epoch, training_epoch, 1):
         # decode
         # Print accuracy by display_batch.
         if batch % display_batch == 0:
-            # Calculate batch accuracy.
-            # acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
-            # Calculate batch loss.
             logging.debug("batch_y: " + str(batch_y))
             loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
             logging.debug("epoch:" + str(epoch) + ",Batch:" + str(batch) + ", Batch Loss= {:.6f}".format(loss)
@@ -416,7 +440,7 @@ for epoch in range(start_epoch, training_epoch, 1):
     validation_beam_ler /= (batch_size * validation_batches)
     validation_greedy_ler /= (batch_size * validation_batches)
     log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
-    logging.info(log.format(epoch + 1, training_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
+    logging.info(log.format(epoch + 1, end_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
     logging.debug("Validation end.")
     # TODO
     validation_summary = sess.run(validation_merged, feed_dict)
