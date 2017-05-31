@@ -246,7 +246,7 @@ for epoch in range(start_epoch, end_epoch, 1):
     else:
         sess.run(reset_learning_rate)
     parameter_summary = sess.run(parameter_merged)
-    writer.add_summary(parameter_summary, training_global_step)
+    writer.add_summary(parameter_summary, epoch)
     #
     train_cost = train_greedy_ler = train_beam_ler = 0
     #
@@ -318,22 +318,12 @@ for epoch in range(start_epoch, end_epoch, 1):
         train_summary, _, batch_greedy_decode, batch_beam_decode = sess.run([train_merged, train_op, greedy_decoded, beam_decoded], feed_dict)
         writer.add_summary(train_summary, training_global_step)
         training_global_step += 1
+        #
         train_cost += train_batch_cost * batch_size
-        # ler
-        # batch_greedy_ler = sess.run(greedy_ler, feed_dict)
         train_greedy_ler += train_batch_greedy_ler * batch_size
-        #
-        # batch_beam_ler = sess.run(beam_ler, feed_dict)
         train_beam_ler += train_batch_beam_ler * batch_size
-        # decode
-        # batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
-        # batch_beam_decode = sess.run(beam_decoded, feed_dict)
-        #
         # Print accuracy by display_batch.
         if batch % display_batch == 0:
-            # Calculate batch accuracy.
-            # acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
-            # Calculate batch loss.
             logging.debug("batch_y: "+str(batch_y))
             loss, batch_beam_ler, batch_greedy_ler = sess.run([cost, beam_ler, greedy_ler], feed_dict={x: batch_x, y: batch_y, seq_len: batch_seq_len})
             logging.debug("epoch:" + str(epoch) + ",Batch:"+ str(batch) + ", Batch Loss= {:.6f}".format(loss)
@@ -342,22 +332,21 @@ for epoch in range(start_epoch, end_epoch, 1):
             logging.debug("greddy decode:" + str(batch_greedy_decode))
         # break;
     # Metrics mean
-    train_cost /= (batch_size * training_batches)
-    train_beam_ler /= (batch_size * training_batches)
-    train_greedy_ler /= (batch_size * training_batches)
-    logging.debug("train_cost:"+ str(train_cost))
-    logging.debug("train_beam_ler:" + str(train_beam_ler))
-    logging.debug("train_greedy_ler:" + str(train_greedy_ler))
-
+    # train_cost /= (batch_size * training_batches)
+    # train_beam_ler /= (batch_size * training_batches)
+    # train_greedy_ler /= (batch_size * training_batches)
+    # logging.debug("train_cost:"+ str(train_cost))
+    # logging.debug("train_beam_ler:" + str(train_beam_ler))
+    # logging.debug("train_greedy_ler:" + str(train_greedy_ler))
     # log = "epoch {}/{}, train_cost = {:.3f}, train_beam_ler = {:.3f}, train_greedy_ler = {:.3f}, time = {:.3f}"
     # logging.info(log.format(epoch+1, end_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
-    # TODO
+    logging.info("Training end.")
     # Save session by epoch.
     if epoch % save_epoch ==0:
         saver.save(sess, to_save_model_path, global_step=epoch);
         logging.info("Model saved successfully to: " + to_save_model_path)
     # Validation
-    logging.debug("Validation starting!")
+    logging.info("Validation starting!")
     logging.debug("Number of validation trunks:"+str(len(all_validation_trunk_names)))
     # Calculate how many batches can the data set be divided into.
     validation_batches = math.floor(len(all_validation_trunk_names)/batch_size)
@@ -413,11 +402,10 @@ for epoch in range(start_epoch, end_epoch, 1):
         # Train with validation set.
         # batch_cost, _ = sess.run([cost, optimizer], feed_dict)
         # Train without validation set.
-        validation_batch_cost = sess.run(cost, feed_dict)
-        batch_greedy_ler = sess.run(greedy_ler, feed_dict)
-        batch_beam_ler = sess.run(beam_ler, feed_dict)
-        batch_greedy_decode = sess.run(greedy_decoded, feed_dict)
-        batch_beam_decode = sess.run(beam_decoded, feed_dict)
+        validation_summary, batch_greedy_decode, batch_beam_decode = sess.run([validation_merged, greedy_decoded, beam_decoded], feed_dict)
+        # Merge summaries.
+        writer.add_summary(validation_summary, global_step=validation_global_step)
+        validation_global_step += 1
         #
         validation_cost += validation_batch_cost * batch_size
         # ler
@@ -436,16 +424,11 @@ for epoch in range(start_epoch, end_epoch, 1):
             logging.debug("greddy decode:" + str(batch_greedy_decode))
         # break;
     # Metrics mean
-    validation_cost /= (batch_size * validation_batches)
-    validation_beam_ler /= (batch_size * validation_batches)
-    validation_greedy_ler /= (batch_size * validation_batches)
-    log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
-    logging.info(log.format(epoch + 1, end_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
+    # validation_cost /= (batch_size * validation_batches)
+    # validation_beam_ler /= (batch_size * validation_batches)
+    # validation_greedy_ler /= (batch_size * validation_batches)
+    # log = "epoch {}/{}, validation_cost = {:.3f}, validation_beam_ler = {:.3f}, validation_greedy_ler = {:.3f}, time = {:.3f}"
+    # logging.info(log.format(epoch + 1, end_epoch, validation_cost, validation_beam_ler, validation_greedy_ler, time.time() - start))
     logging.debug("Validation end.")
-    # TODO
-    validation_summary = sess.run(validation_merged, feed_dict)
-    # Merge summaries.
-    writer.add_summary(validation_summary, global_step=validation_global_step)
-    validation_global_step += 1
     # break;
 logging.info("Optimization Finished!")
