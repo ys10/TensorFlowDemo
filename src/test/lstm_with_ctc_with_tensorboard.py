@@ -99,8 +99,8 @@ parameter_merged = tf.summary.merge([scalar_learning_rate])
 
 with tf.name_scope('data'):
     batch_size = 16
-    display_batch = 10
-    save_batch = 10
+    display_batch = 50
+    save_epoch = 10
 
 
 with tf.name_scope('dropout'):
@@ -253,7 +253,7 @@ for epoch in range(start_epoch, end_epoch, 1):
     start = time.time()
     # For each epoch.
     logging.debug("epoch:" + str(epoch))
-    logging.debug("learning_rate: "+ str(learning_rate))
+    # logging.debug("learning_rate: "+ str(learning_rate))
     # Break out of the training epoch while there is no trunk usable.
     if not all_training_trunk_names:
         break
@@ -276,7 +276,7 @@ for epoch in range(start_epoch, end_epoch, 1):
             # For each trunk in the batch.
             # Calculate the index of current trunk in the whole data set.
             trunk_name_index = batch * batch_size + trunk
-            logging.debug("trunk_name_index: " + str(trunk_name_index))
+            # logging.debug("trunk_name_index: " + str(trunk_name_index))
             # There is a fact that if the number of all trunks
             #   can not be divisible by batch size,
             #   then the last batch can not get enough trunks of batch size.
@@ -291,7 +291,7 @@ for epoch in range(start_epoch, end_epoch, 1):
             # Get trunk name from all trunk names by trunk name index.
             # trunk_name = all_training_trunk_names[trunk_name_index].split()[0]
             trunk_name = all_training_trunk_names[trunk_name_index].strip('\n')
-            logging.debug("trunk_name: " + trunk_name)
+            # logging.debug("trunk_name: " + trunk_name)
             # Get trunk data by trunk name without line break character.
             # sentence_x is a tensor of shape (n_steps, n_inputs)
             sentence_x = training_data_file['source/' + trunk_name]
@@ -353,7 +353,7 @@ for epoch in range(start_epoch, end_epoch, 1):
     # logging.info(log.format(epoch+1, end_epoch, train_cost, train_beam_ler, train_greedy_ler, time.time() - start))
     # TODO
     # Save session by epoch.
-    if epoch % save_batch ==0:
+    if epoch % save_epoch ==0:
         saver.save(sess, to_save_model_path, global_step=epoch);
         logging.info("Model saved successfully to: " + to_save_model_path)
     # Validation
@@ -376,7 +376,7 @@ for epoch in range(start_epoch, end_epoch, 1):
             # For each trunk in the batch.
             # Calculate the index of current trunk in the whole data set.
             trunk_name_index = batch * batch_size + trunk
-            logging.debug("trunk_name_index: " + str(trunk_name_index))
+            # logging.debug("trunk_name_index: " + str(trunk_name_index))
             # There is a fact that if the number of all trunks
             #   can not be divisible by batch size,
             #   then the last batch can not get enough trunks of batch size.
