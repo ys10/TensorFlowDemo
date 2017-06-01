@@ -71,13 +71,13 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 '''
 # Parameters
 with tf.name_scope('parameter'):
-    base_learning_rate = tf.Variable(0.0001, trainable=False)
-    learning_rate = tf.Variable(0.0001, trainable=False)
+    base_learning_rate = tf.Variable(0.001, trainable=False)
+    learning_rate = tf.Variable(0.001, trainable=False)
     start_epoch = 40
     end_epoch = 100
     decay_epoch = 5
-    reset_epoch = 10
-    decay_rate = 0.95
+    reset_epoch = 20
+    decay_rate = 0.6
     current_epoch = tf.Variable(0, trainable=False)
 
     def decay_learning_rate(current_epoch):
