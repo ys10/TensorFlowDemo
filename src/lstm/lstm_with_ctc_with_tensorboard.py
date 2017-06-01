@@ -72,11 +72,11 @@ we will then handle 69 dimension sequences of 200 steps for every sample.
 # Parameters
 with tf.name_scope('parameter'):
     base_learning_rate = tf.Variable(0.0001, trainable=False)
-    learning_rate = base_learning_rate
+    learning_rate = tf.Variable(0.0001, trainable=False)
     start_epoch = 40
     end_epoch = 100
-    decay_epoch = 15
-    reset_epoch = 30
+    decay_epoch = 5
+    reset_epoch = 10
     decay_rate = 0.95
     current_epoch = tf.Variable(0, trainable=False)
 
@@ -330,7 +330,7 @@ for epoch in range(start_epoch, end_epoch, 1):
                           + ", Batch beam ler= {:.6f}".format(batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
             logging.debug("beam decode:" + str(batch_beam_decode))
             logging.debug("greddy decode:" + str(batch_greedy_decode))
-        # break;
+        break;
     # Metrics mean
     # train_cost /= (batch_size * training_batches)
     # train_beam_ler /= (batch_size * training_batches)
@@ -422,7 +422,7 @@ for epoch in range(start_epoch, end_epoch, 1):
                 batch_beam_ler) + ", Batch greddy ler= {:.6f}".format(batch_greedy_ler))
             logging.debug("beam decode:" + str(batch_beam_decode))
             logging.debug("greddy decode:" + str(batch_greedy_decode))
-        # break;
+        break;
     # Metrics mean
     # validation_cost /= (batch_size * validation_batches)
     # validation_beam_ler /= (batch_size * validation_batches)
