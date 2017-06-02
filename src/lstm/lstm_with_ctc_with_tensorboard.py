@@ -14,6 +14,7 @@ import h5py
 import math
 from tensorflow.contrib import rnn
 from src.lstm.utils import *
+from src.lstm.RNNCell import GRUCell, LSTMCell, MultiCellWrapper
 
 try:
     from tensorflow.python.ops import ctc_ops
@@ -145,9 +146,12 @@ with tf.variable_scope("LSTM") as vs:
     }
 
     # Define a lstm cell with tensorflow
-    lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
+    # lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
+    lstm_cell = LSTMCell(n_hidden, forget_bias=1.0)
+    # lstm_cell = GRUCell(n_hidden)
     # Drop out in case of over-fitting.
     lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
+    # lstm_cell = MultiCellWrapper(lstm_cell)
     # Stack two same lstm cell
     stack = rnn.MultiRNNCell([lstm_cell] * n_layers)
 
